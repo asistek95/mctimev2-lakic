@@ -112,9 +112,13 @@ def set_cached(key, data):
     _cache[key] = (data, time.time())
 
 def clear_cache():
-    """Leert den Cache"""
+    """Leert den Cache (inkl. Backend-Employees-Cache)"""
     global _cache
     _cache = {}
+    if backend_service and hasattr(backend_service, 'mctime_api'):
+        backend_service.mctime_api._employees_cache = None
+    if middleware and hasattr(middleware, 'backend') and middleware.backend:
+        middleware.backend.mctime_api._employees_cache = None
 
 
 def _env_file_path() -> str:
