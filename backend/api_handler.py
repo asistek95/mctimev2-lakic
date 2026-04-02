@@ -1,5 +1,6 @@
 import requests
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -11,6 +12,7 @@ class McTimeAPI:
             "content-type": "application/json",
             "API_KEY": api_key
         }
+        self._employees_cache = None
 
     @staticmethod
     def _normalize_personnel_number(value: Optional[str]) -> str:
@@ -89,7 +91,12 @@ class McTimeAPI:
         Get list of employees/users
         Hinweis: Organisations-Filter deaktiviert (API-Berechtigungen fehlen)
         Holt Personalnummern über den Detail-Endpoint /users/{id}.
+        Ergebnis wird gecacht bis manuell geleert.
         """
+        # Cache prüfen
+        if self._employees_cache is not None:
+            return self._employees_cache
+
         url = f"{self.base_url}/users"
         params = {"roles": "employee"}
         # Organisations-Filter deaktiviert - keine API-Berechtigung
@@ -101,16 +108,22 @@ class McTimeAPI:
                 data = response.json()
                 users = data.get("items", [{}])[0].get("data", {}).get("users", [])
                 
+                # Detail-Daten parallel fuer alle User holen
+                user_ids = [u.get("id", "") for u in users]
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    details = list(executor.map(
+                        lambda uid: self._get_user_detail(uid) if uid else {},
+                        user_ids
+                    ))
+
                 employees = []
-                for user in users:
+                for user, detail in zip(users, details):
                     full_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
                     if not full_name:
                         full_name = "Unknown User"
 
-                    # Personalnummer aus Detail-Endpoint holen
-                    user_id = user.get("id", "")
-                    detail = self._get_user_detail(user_id) if user_id else {}
                     personnel_number = self._extract_personnel_number(detail)
+                    user_id = user.get("id", "")
 
                     employees.append({
                         "id": user_id,
@@ -121,7 +134,9 @@ class McTimeAPI:
                         "organizationId": user.get("organizationId"),
                         "personnel_number": personnel_number
                     })
-                return sorted(employees, key=lambda x: x["name"])
+                result = sorted(employees, key=lambda x: x["name"])
+                self._employees_cache = result
+                return result
             else:
                 print(f"Error fetching employees: {response.status_code}")
                 return []
