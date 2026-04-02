@@ -214,6 +214,98 @@ def _require_dev_login():
         return redirect(url_for('developer_login'))
     return None
 
+
+PRODUCTIVE_TIME_TYPES = {
+    'work',
+    'home_office',
+    'travel',
+    'clocking',
+    'worked_rest_period',
+    'flextime'
+}
+
+SICK_TIME_TYPES = {
+    'sick',
+    'medical_leave',
+    'work_accident_sickness'
+}
+
+
+def _safe_float(value, default=0.0):
+    try:
+        if isinstance(value, str):
+            return float(value.replace(',', '.'))
+        return float(value)
+    except (TypeError, ValueError, AttributeError):
+        return default
+
+
+def _to_hours(milliseconds):
+    return round(_safe_float(milliseconds) / 3600000, 2)
+
+
+def _normalize_personnel_number(value):
+    if value is None:
+        return ''
+    return ''.join(ch for ch in str(value) if ch.isdigit())
+
+
+def _build_full_name(first_name, last_name, fallback=''):
+    full_name = f"{(first_name or '').strip()} {(last_name or '').strip()}".strip()
+    return full_name or fallback or 'Unbekannt'
+
+
+def _build_short_employee_name(first_name, last_name, fallback=''):
+    first_name = (first_name or '').strip()
+    last_name = (last_name or '').strip()
+
+    if first_name and last_name:
+        return f"{first_name[0]}. {last_name}"
+    if last_name:
+        return last_name
+    if first_name:
+        return first_name
+    fallback = (fallback or '').strip()
+    if not fallback:
+        return 'Unbekannt'
+    parts = fallback.split()
+    if len(parts) >= 2:
+        return f"{parts[0][0]}. {' '.join(parts[1:])}"
+    return fallback
+
+
+def _build_analytics_range(date_from, date_to):
+    return (
+        f"{date_from.strftime('%Y-%m-%d')}T00:00:00+02:00",
+        f"{date_to.strftime('%Y-%m-%d')}T23:59:59+02:00"
+    )
+
+
+def _get_entry_date_key(entry):
+    if entry.get('date_formatted'):
+        return entry.get('date_formatted')
+    raw_from = entry.get('from')
+    if not raw_from:
+        return None
+    try:
+        return datetime.fromisoformat(raw_from.replace('Z', '+00:00')).strftime('%d.%m.%y')
+    except ValueError:
+        return None
+
+
+def _calculate_adherence_score(productive_hours, target_hours):
+    if target_hours <= 0:
+        return 0
+    deviation_hours = productive_hours - target_hours
+    score = 100 - (abs(deviation_hours) / target_hours * 100)
+    return max(0, round(score))
+
+
+def _format_time_type(type_name):
+    if not type_name:
+        return 'Arbeitszeit'
+    return str(type_name)
+
 if not API_KEY:
     print("WARNING: MCTIME_API_KEY environment variable not set!")
     print("Please configure your .env file with MCTIME_API_KEY")
@@ -909,6 +1001,7 @@ def get_chart_stats():
 
         date_from_api = date_from.strftime('%d.%m.%Y')
         date_to_api = date_to.strftime('%d.%m.%Y')
+        analytics_from_api, analytics_to_api = _build_analytics_range(date_from, date_to)
 
         logger.info(f"Date range: {date_from_api} to {date_to_api}")
 
@@ -927,11 +1020,17 @@ def get_chart_stats():
             total_hours = 0
             total_entries = 0
             employee_names_full = []
+            punctuality_details = []
+            sickday_details = []
+            total_target_hours = 0.0
+            total_productive_hours = 0.0
 
             # Sammle Daten von allen Mitarbeitern PARALLEL (statt sequentiell)
             def fetch_employee_entries(emp):
                 emp_id = emp.get('id') or emp.get('employee_id')
-                emp_name = emp.get('name') or emp.get('employee_name') or emp.get('first_name', '')
+                first_name = emp.get('firstName') or emp.get('first_name') or ''
+                last_name = emp.get('lastName') or emp.get('last_name') or ''
+                emp_name = emp.get('name') or emp.get('employee_name') or _build_full_name(first_name, last_name, emp_id)
                 if not emp_id:
                     return None
                 try:
@@ -940,7 +1039,22 @@ def get_chart_stats():
                         date_from=date_from_api,
                         date_to=date_to_api
                     )
-                    return (emp_id, emp_name, time_entries)
+                    analytics = {}
+                    if backend_service and backend_service.mctime_api:
+                        analytics = backend_service.mctime_api.get_analytics(
+                            analytics_from=analytics_from_api,
+                            analytics_to=analytics_to_api,
+                            user_ids=[emp_id]
+                        )
+                    return {
+                        'employee_id': emp_id,
+                        'full_name': emp_name,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'personnel_number': _normalize_personnel_number(emp.get('personnel_number')),
+                        'time_entries': time_entries,
+                        'analytics': analytics
+                    }
                 except Exception as e:
                     logger.warning(f"Fehler bei Mitarbeiter {emp_id}: {e}")
                     return None
@@ -951,24 +1065,52 @@ def get_chart_stats():
             for result in results:
                 if result is None:
                     continue
-                emp_id, emp_name, time_entries = result
+                emp_id = result['employee_id']
+                emp_name = result['full_name']
+                first_name = result['first_name']
+                last_name = result['last_name']
+                short_name = _build_short_employee_name(first_name, last_name, emp_name)
+                time_entries = result['time_entries']
+                analytics_data = result.get('analytics') or {}
+
+                totals = analytics_data.get('totals', {}) if isinstance(analytics_data, dict) else {}
+                productive_hours_analytics = _to_hours((totals.get('productive') or {}).get('total'))
+                target_hours_analytics = _to_hours((totals.get('targetTimes') or {}).get('total'))
+                deviation_hours = round(productive_hours_analytics - target_hours_analytics, 2)
+
+                if target_hours_analytics > 0 or productive_hours_analytics > 0:
+                    total_target_hours += target_hours_analytics
+                    total_productive_hours += productive_hours_analytics
+                    punctuality_details.append({
+                        'name': emp_name,
+                        'short_name': short_name,
+                        'target_hours': target_hours_analytics,
+                        'productive_hours': productive_hours_analytics,
+                        'deviation_hours': deviation_hours,
+                        'adherence_percent': _calculate_adherence_score(productive_hours_analytics, target_hours_analytics)
+                    })
 
                 if time_entries:
                     total_entries += len(time_entries)
                     emp_total = 0
+                    sick_dates = set()
                     for entry in time_entries:
-                        # Backend liefert actual_work_hours (Stunden ohne Pausen)
-                        hours = entry.get('actual_work_hours', 0) or 0
-                        if isinstance(hours, str):
-                            try:
-                                hours = float(hours.replace(',', '.'))
-                            except (ValueError, AttributeError):
-                                hours = 0
+                        entry_type = (entry.get('type') or '').strip().lower()
+                        date_key = _get_entry_date_key(entry)
+
+                        if entry_type in SICK_TIME_TYPES and date_key:
+                            sick_dates.add(date_key)
+
+                        if entry_type not in PRODUCTIVE_TIME_TYPES:
+                            continue
+
+                        hours = _safe_float(entry.get('actual_work_hours', 0), 0)
 
                         emp_total += hours
 
-                        # Tägliche Aggregation - date_formatted ist "DD.MM.YY"
-                        date_key = entry.get('date_formatted', 'unknown')
+                        if not date_key:
+                            date_key = 'unknown'
+
                         if date_key not in daily_hours:
                             daily_hours[date_key] = 0
                         daily_hours[date_key] += hours
@@ -995,6 +1137,13 @@ def get_chart_stats():
                             project_hours[project] = 0
                         project_hours[project] += hours
 
+                    if sick_dates:
+                        sickday_details.append({
+                            'name': emp_name,
+                            'short_name': short_name,
+                            'days': len(sick_dates)
+                        })
+
                     if emp_total > 0:
                         employee_hours[emp_name or emp_id] = emp_total
                         employee_names_full.append(emp_name or emp_id)
@@ -1008,11 +1157,23 @@ def get_chart_stats():
             sorted_projects = sorted(project_hours.items(), key=lambda x: x[1], reverse=True)
 
             # Monatstrend - tägliche Stunden nach Datum sortiert
-            sorted_daily = sorted(daily_hours.items())
+            sorted_daily = sorted(
+                [(key, value) for key, value in daily_hours.items() if key != 'unknown'],
+                key=lambda item: datetime.strptime(item[0], '%d.%m.%y')
+            )
 
             # Berechne KPIs
             active_employees = len([e for e in sorted_employees if e[1] > 0])
             avg_hours = round(total_hours / active_employees, 1) if active_employees > 0 else 0
+            total_sick_days = sum(item['days'] for item in sickday_details)
+            punctuality_score = _calculate_adherence_score(total_productive_hours, total_target_hours)
+            overall_deviation_hours = round(total_productive_hours - total_target_hours, 2)
+
+            punctuality_details = sorted(
+                punctuality_details,
+                key=lambda item: (item['adherence_percent'], -abs(item['deviation_hours']))
+            )
+            sickday_details = sorted(sickday_details, key=lambda item: item['days'], reverse=True)[:3]
 
             # Wochentag-Stunden runden
             weekday_hours = [round(h, 1) for h in weekday_hours]
@@ -1039,7 +1200,10 @@ def get_chart_stats():
                     "total_hours": round(total_hours, 2),
                     "employee_count": active_employees,
                     "entry_count": total_entries,
-                    "avg_hours_per_employee": avg_hours
+                    "avg_hours_per_employee": avg_hours,
+                    "punctuality_score": punctuality_score,
+                    "punctuality_diff_hours": overall_deviation_hours,
+                    "sick_days_total": total_sick_days
                 },
                 # Wochentag-Daten (Mo-So)
                 "weekday_data": {
@@ -1057,11 +1221,29 @@ def get_chart_stats():
                 },
                 # Mitarbeiter-Ranking
                 "employee_data": {
-                    "labels": [e[0].split(' ')[0] if ' ' in e[0] else e[0] for e in top_employees],
+                    "labels": [
+                        _build_short_employee_name(
+                            next((emp.get('firstName', '') for emp in employees if (emp.get('name') or '') == e[0]), ''),
+                            next((emp.get('lastName', '') for emp in employees if (emp.get('name') or '') == e[0]), ''),
+                            e[0]
+                        )
+                        for e in top_employees
+                    ],
                     "values": [round(e[1], 2) for e in top_employees],
-                    "full_names": employee_names_full,
+                    "full_names": [e[0] for e in top_employees],
                     "total_count": len(sorted_employees),
                     "showing": len(top_employees)
+                },
+                "punctuality_data": {
+                    "score": punctuality_score,
+                    "target_hours": round(total_target_hours, 2),
+                    "productive_hours": round(total_productive_hours, 2),
+                    "difference_hours": overall_deviation_hours,
+                    "details": punctuality_details
+                },
+                "sickdays_data": {
+                    "total": total_sick_days,
+                    "details": sickday_details
                 }
             }
 
@@ -1075,11 +1257,21 @@ def get_chart_stats():
                 "status": "success",
                 "filter": filter_type,
                 "filter_label": f"{date_from.strftime('%d.%m.%Y')} - {date_to.strftime('%d.%m.%Y')}",
-                "kpi": {"total_hours": 0, "employee_count": 0, "entry_count": 0, "avg_hours_per_employee": 0},
+                "kpi": {
+                    "total_hours": 0,
+                    "employee_count": 0,
+                    "entry_count": 0,
+                    "avg_hours_per_employee": 0,
+                    "punctuality_score": 0,
+                    "punctuality_diff_hours": 0,
+                    "sick_days_total": 0
+                },
                 "weekday_data": {"values": [0, 0, 0, 0, 0, 0, 0]},
                 "project_data": {"labels": [], "values": []},
                 "monthly_data": {"labels": [], "values": []},
-                "employee_data": {"labels": [], "values": [], "full_names": [], "total_count": 0, "showing": 0}
+                "employee_data": {"labels": [], "values": [], "full_names": [], "total_count": 0, "showing": 0},
+                "punctuality_data": {"score": 0, "target_hours": 0, "productive_hours": 0, "difference_hours": 0, "details": []},
+                "sickdays_data": {"total": 0, "details": []}
             })
 
     except Exception as e:
@@ -1343,16 +1535,19 @@ def download_csv():
     # Daten hinzufügen im korrekten Format (verwende all_data statt data)
     for row in all_data:
         # Name aufteilen
-        name_parts = (row.get('name', '') or '').split(' ', 1)
-        first_name = name_parts[0] if len(name_parts) > 0 else ''
-        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        first_name = row.get('first_name', '')
+        last_name = row.get('last_name', '')
+        if not first_name and not last_name:
+            name_parts = (row.get('name', '') or '').split(' ', 1)
+            first_name = name_parts[0] if len(name_parts) > 0 else ''
+            last_name = name_parts[1] if len(name_parts) > 1 else ''
         
         csv_data.append([
-            row.get('employee_id', ''),             # Personalnummer (UUID)
+            _normalize_personnel_number(row.get('personnel_number', '')),  # Personalnummer nur numerisch
             first_name,                             # Vorname
             last_name,                              # Nachname
             row.get('date_formatted', ''),          # Datum (01.10.25)
-            'Arbeitszeit',                          # Type
+            _format_time_type(row.get('type')),     # Type
             row.get('time_start', ''),              # Zeit Beginn (05:00)
             row.get('time_end', ''),                # Zeit Ende (18:00)
             f'"{row.get("breaks_formatted", "")}"' if row.get('breaks_formatted') else '', # Pause in Anführungszeichen

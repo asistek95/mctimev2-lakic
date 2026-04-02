@@ -249,7 +249,7 @@ class MailManager:
         
         for entry in time_entries:
             writer.writerow([
-                entry.get('employee_id', ''),      # Personalnummer (UUID)
+                entry.get('personnel_number', ''),  # Personalnummer (numerisch)
                 first_name,                         # Vorname
                 last_name,                          # Nachname
                 entry.get('date_formatted', ''),    # Datum (01.10.25)

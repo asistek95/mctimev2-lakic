@@ -57,7 +57,9 @@ class Settings:
     
     @classmethod
     def is_email_configured(cls) -> bool:
-        """Check if email settings are configured"""
+        """Check if email settings are configured (SMTP or Resend)"""
+        if cls.EMAIL_METHOD == 'resend':
+            return bool(cls.RESEND_API_KEY and cls.SENDER_EMAIL)
         return all([
             cls.SMTP_SERVER,
             cls.SMTP_PORT,

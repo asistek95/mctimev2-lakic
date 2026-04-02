@@ -16,6 +16,8 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
     <!-- Chart.js für moderne Diagramme -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <style>
         /* Charts Page Specific Styles */
         .hero-section {
@@ -1062,6 +1064,7 @@
         }
         
         .kpi-detail-badge.late { background: #fef3c7; color: #d97706; }
+        .kpi-detail-badge.early { background: #d1fae5; color: #059669; }
         .kpi-detail-badge.sick { background: #fee2e2; color: #dc2626; }
         
         /* ============================================
@@ -1096,6 +1099,79 @@
         .legend-dot.orange { background: #f59e0b; }
         .legend-dot.yellow { background: #fbbf24; }
         .legend-dot.gray { background: #94a3b8; }
+
+        .export-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 22px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
+        }
+
+        .export-panel-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .export-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .export-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+            max-width: 720px;
+        }
+
+        .export-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .export-select {
+            min-width: 240px;
+        }
+
+        .export-meta {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .export-status.ready {
+            color: #15803d;
+            font-weight: 600;
+        }
+
+        @media (max-width: 640px) {
+            .export-panel-top {
+                align-items: stretch;
+            }
+
+            .export-actions {
+                width: 100%;
+            }
+
+            .export-select,
+            #exportPdfBtn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1372,7 +1448,7 @@
             <div class="kpi-card green clickable" onclick="showKpiDetails('punctuality')">
                 <div class="kpi-icon">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                        <path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
                     </svg>
                 </div>
                 <div class="kpi-value" id="kpi-punctuality">-</div>
@@ -1454,6 +1530,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- Dritte KPI Zeile: Überstunden & Minusstunden -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: -12px;">
+            <div class="kpi-card green clickable" onclick="showKpiDetails('overtime')">
+                <div class="kpi-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M7,14L12,9L17,14H7Z"/>
+                    </svg>
+                </div>
+                <div class="kpi-value" id="kpi-overtime-plus">-</div>
+                <div class="kpi-label">Überstunden</div>
+                <div class="kpi-change positive" id="kpi-overtime-plus-info">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M7,14L12,9L17,14H7Z"/>
+                    </svg>
+                    <span>Ist &gt; Soll</span>
+                </div>
+                <div class="kpi-click-hint">👆 Klicken für Top 3</div>
+            </div>
+            
+            <div class="kpi-card red clickable" onclick="showKpiDetails('minushours')">
+                <div class="kpi-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M7,10L12,15L17,10H7Z"/>
+                    </svg>
+                </div>
+                <div class="kpi-value" id="kpi-overtime-minus">-</div>
+                <div class="kpi-label">Minusstunden</div>
+                <div class="kpi-change negative" id="kpi-overtime-minus-info">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M7,10L12,15L17,10H7Z"/>
+                    </svg>
+                    <span>Ist &lt; Soll</span>
+                </div>
+                <div class="kpi-click-hint">👆 Klicken für Top 3</div>
+            </div>
+            
+            <div class="kpi-card" style="visibility: hidden;"></div>
+        </div>
         
         <!-- KPI Detail Modal -->
         <div class="kpi-modal-overlay" id="kpiModal" onclick="closeKpiModal(event)">
@@ -1468,10 +1583,36 @@
             </div>
         </div>
 
+        <div class="export-panel">
+            <div class="export-panel-top">
+                <div>
+                    <div class="export-title">PDF-Export für Auswertungen</div>
+                    <div class="export-subtitle">Wählen Sie eine geladene Grafik oder exportieren Sie alle Diagramme gesammelt. Im PDF bekommt jede Grafik eine eigene Seite mit Zeitraum, Beschreibung und Seitenzählung.</div>
+                </div>
+                <div class="export-actions">
+                    <select id="pdfChartSelect" class="filter-select-modern export-select">
+                        <option value="all">Alle geladenen Grafiken</option>
+                        <option value="weekday">Arbeitszeiten pro Wochentag</option>
+                        <option value="project">Projektverteilung</option>
+                        <option value="trend">Arbeitsstunden pro Monat</option>
+                        <option value="team">Mitarbeiter Stunden Ranking</option>
+                    </select>
+                    <button class="load-data-btn" id="exportPdfBtn" disabled>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M12,11L16,15H13.5V19H10.5V15H8L12,11Z"/></svg>
+                        PDF exportieren
+                    </button>
+                </div>
+            </div>
+            <div class="export-meta">
+                <span id="exportPeriodInfo">Zeitraum: Noch keine Daten geladen</span>
+                <span class="export-status" id="exportStatusText">Bitte zuerst Charts laden</span>
+            </div>
+        </div>
+
         <!-- Charts Grid -->
         <div class="charts-grid">
             <!-- Arbeitszeiten Chart -->
-            <div class="chart-card">
+            <div class="chart-card" id="chart-card-weekday" data-chart-key="weekday" data-chart-title="Arbeitszeiten pro Wochentag">
                 <div class="chart-header">
                     <div class="chart-title">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1502,7 +1643,7 @@
             </div>
             
             <!-- Projektverteilung Chart -->
-            <div class="chart-card">
+            <div class="chart-card" id="chart-card-project" data-chart-key="project" data-chart-title="Projektverteilung">
                 <div class="chart-header">
                     <div class="chart-title">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1518,7 +1659,7 @@
             </div>
             
             <!-- Monatstrend Chart -->
-            <div class="chart-card full-width">
+            <div class="chart-card full-width" id="chart-card-trend" data-chart-key="trend" data-chart-title="Arbeitsstunden pro Monat">
                 <div class="chart-header">
                     <div class="chart-title">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1534,7 +1675,7 @@
             </div>
             
             <!-- Team Performance -->
-            <div class="chart-card full-width">
+            <div class="chart-card full-width" id="chart-card-team" data-chart-key="team" data-chart-title="Mitarbeiter Stunden Ranking">
                 <div class="chart-header">
                     <div class="chart-title">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1638,6 +1779,12 @@
         
         // Chart Instanzen speichern für Updates
         let weekdayChart, projectChart, trendChart, teamChart;
+        let currentOvertimeData = [];
+        let currentMinushoursData = [];
+        let currentPunctualityData = [];
+        let currentSickdaysData = [];
+        let currentFilterLabel = '';
+        let currentChartData = null;
 
         // Aktueller Filter
         let currentFilter = 'month';
@@ -1658,6 +1805,155 @@
             weekend: '#fbbf24',
             background: 'rgba(59, 130, 246, 0.1)'
         };
+
+        const chartExportDefinitions = [
+            { key: 'weekday', selector: '#chart-card-weekday', title: 'Arbeitszeiten pro Wochentag' },
+            { key: 'project', selector: '#chart-card-project', title: 'Projektverteilung' },
+            { key: 'trend', selector: '#chart-card-trend', title: 'Arbeitsstunden pro Monat' },
+            { key: 'team', selector: '#chart-card-team', title: 'Mitarbeiter Stunden Ranking' }
+        ];
+
+        function formatNumber(value, fractionDigits = 1) {
+            return Number(value || 0).toLocaleString('de-DE', {
+                minimumFractionDigits: fractionDigits,
+                maximumFractionDigits: fractionDigits
+            });
+        }
+
+        function formatHours(value, fractionDigits = 1) {
+            return `${formatNumber(value, fractionDigits)} Std.`;
+        }
+
+        function formatSignedHours(value) {
+            const number = Number(value || 0);
+            const prefix = number > 0 ? '+' : '';
+            return `${prefix}${formatNumber(number, 1)} Std.`;
+        }
+
+        function updateExportState(isReady) {
+            const exportButton = document.getElementById('exportPdfBtn');
+            const exportStatus = document.getElementById('exportStatusText');
+            const exportPeriodInfo = document.getElementById('exportPeriodInfo');
+
+            exportButton.disabled = !isReady;
+            exportStatus.textContent = isReady ? 'Export bereit' : 'Bitte zuerst Charts laden';
+            exportStatus.classList.toggle('ready', isReady);
+            exportPeriodInfo.textContent = `Zeitraum: ${currentFilterLabel || 'Noch keine Daten geladen'}`;
+        }
+
+        function getSelectedChartsForExport() {
+            const selection = document.getElementById('pdfChartSelect').value;
+            if (selection === 'all') {
+                return chartExportDefinitions;
+            }
+            return chartExportDefinitions.filter(chart => chart.key === selection);
+        }
+
+        async function loadImageAsDataUrl(src) {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.crossOrigin = 'anonymous';
+                image.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.naturalWidth;
+                    canvas.height = image.naturalHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(image, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                image.onerror = reject;
+                image.src = src;
+            });
+        }
+
+        async function exportChartsAsPdf() {
+            if (!currentChartData) {
+                alert('Bitte laden Sie zuerst Chart-Daten, bevor Sie exportieren.');
+                return;
+            }
+
+            const selectedCharts = getSelectedChartsForExport();
+            if (selectedCharts.length === 0) {
+                alert('Für die aktuelle Auswahl wurde keine Grafik gefunden.');
+                return;
+            }
+
+            const exportButton = document.getElementById('exportPdfBtn');
+            const originalText = exportButton.innerHTML;
+            exportButton.disabled = true;
+            exportButton.innerHTML = 'PDF wird erstellt...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const logoData = await loadImageAsDataUrl("{{ url_for('static', filename='mctime_logo.png') }}");
+                const createdOn = new Date().toLocaleDateString('de-DE');
+
+                for (let index = 0; index < selectedCharts.length; index++) {
+                    const chart = selectedCharts[index];
+                    const cardElement = document.querySelector(chart.selector);
+                    if (!cardElement) {
+                        continue;
+                    }
+
+                    if (index > 0) {
+                        pdf.addPage();
+                    }
+
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 2,
+                        backgroundColor: '#ffffff',
+                        useCORS: true,
+                        logging: false
+                    });
+
+                    const imageData = canvas.toDataURL('image/png');
+                    const headerY = 12;
+                    pdf.addImage(logoData, 'PNG', 12, 8, 34, 10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(16);
+                    pdf.text('Export Zeitauswertungen', 50, headerY + 1);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(10);
+
+                    const description = `Diese Seite zeigt die Grafik ${chart.title} für den Zeitraum ${currentFilterLabel || 'ohne Zeitraumangabe'}.`;
+                    const descriptionLines = pdf.splitTextToSize(description, pageWidth - 24);
+                    pdf.text(descriptionLines, 12, 24);
+
+                    const availableWidth = pageWidth - 24;
+                    const availableHeight = pageHeight - 60;
+                    const imageRatio = canvas.width / canvas.height;
+                    let renderWidth = availableWidth;
+                    let renderHeight = renderWidth / imageRatio;
+
+                    if (renderHeight > availableHeight) {
+                        renderHeight = availableHeight;
+                        renderWidth = renderHeight * imageRatio;
+                    }
+
+                    const imageX = (pageWidth - renderWidth) / 2;
+                    const imageY = 34;
+                    pdf.addImage(imageData, 'PNG', imageX, imageY, renderWidth, renderHeight);
+
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.line(12, pageHeight - 16, pageWidth - 12, pageHeight - 16);
+                    pdf.setFontSize(9);
+                    pdf.text(`Ersteller Infocom GmbH © ${createdOn}`, 12, pageHeight - 10);
+                    pdf.text(`Seite ${index + 1} von ${selectedCharts.length}`, pageWidth - 12, pageHeight - 10, { align: 'right' });
+                }
+
+                const fileSuffix = selectedCharts.length === 1 ? selectedCharts[0].key : 'alle-grafiken';
+                pdf.save(`zeitauswertungen_${fileSuffix}.pdf`);
+            } catch (error) {
+                console.error('PDF-Export fehlgeschlagen:', error);
+                alert(`PDF-Export fehlgeschlagen: ${error.message}`);
+            } finally {
+                exportButton.disabled = false;
+                exportButton.innerHTML = originalText;
+            }
+        }
         
         // Monatsdropdown füllen
         function populateMonthDropdown(defaultYear, defaultMonthIdx) {
@@ -1874,9 +2170,9 @@
             teamChart.data.labels = data.employee_data.labels;
             teamChart.data.datasets[0].data = data.employee_data.values;
             // Farben je nach Stunden
-            const maxHours = Math.max(...data.employee_data.values);
+            const maxHours = Math.max(...data.employee_data.values, 0);
             teamChart.data.datasets[0].backgroundColor = data.employee_data.values.map(v => {
-                const ratio = v / maxHours;
+                const ratio = maxHours > 0 ? v / maxHours : 0;
                 if (ratio > 0.8) return chartColors.secondary;  // Grün für Top-Performer
                 if (ratio > 0.5) return chartColors.primary;    // Blau für Durchschnitt
                 return chartColors.quaternary;                   // Orange für niedrig
@@ -1897,119 +2193,51 @@
             updatePunctualityAndSickdays(data);
         }
         
-        // ==================== PÜNKTLICHKEIT & KRANKHEITSTAGE ====================
-        // Speichere Daten für Modal
-        let currentPunctualityData = [];
-        let currentSickdaysData = [];
-        
         function updatePunctualityAndSickdays(data) {
-            // Simulierte Berechnung basierend auf Zeiteinträgen
-            // In einem echten System würden diese Daten von der API kommen
-            
-            const employeeCount = data.kpi?.employee_count || 0;
-            const totalEntries = data.kpi?.entry_count || 0;
-            
-            // Pünktlichkeits-Logik:
-            // Wir analysieren Startzeiten der Einträge
-            // Als "pünktlich" gilt: Arbeitsbeginn zwischen 06:00 und 09:30
-            // Für Schichtarbeiter (Nachtschicht): 21:00-00:00 oder 05:00-07:00
-            
-            // Simulierte Daten basierend auf echten Einträgen
-            const punctualityRate = calculatePunctuality(data);
-            document.getElementById('kpi-punctuality').textContent = punctualityRate + '%';
-            
-            // Pünktlichkeits-Info
+            const punctuality = data.punctuality_data || {};
+            const sickdays = data.sickdays_data || {};
+            const punctualityScore = Number(punctuality.score || 0);
+            const differenceHours = Number(punctuality.difference_hours || 0);
+            const details = punctuality.details || [];
+
+            // === Pünktlichkeit (Score in %) ===
+            document.getElementById('kpi-punctuality').textContent = `${punctualityScore}%`;
             const punctInfo = document.getElementById('kpi-punctuality-info');
-            if (punctualityRate >= 90) {
+            if (punctualityScore >= 90) {
                 punctInfo.className = 'kpi-change positive';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Sehr gut!</span>`;
-            } else if (punctualityRate >= 75) {
+                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Nahe Sollzeit</span>`;
+            } else if (punctualityScore >= 75) {
                 punctInfo.className = 'kpi-change positive';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg><span>Gut</span>`;
+                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg><span>Soll ${formatHours(punctuality.target_hours)} · Ist ${formatHours(punctuality.productive_hours)}</span>`;
             } else {
                 punctInfo.className = 'kpi-change negative';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Verbesserbar</span>`;
+                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Soll ${formatHours(punctuality.target_hours)} · Ist ${formatHours(punctuality.productive_hours)}</span>`;
             }
-            
-            // Krankheitstage berechnen
-            const sickdays = calculateSickdays(data);
-            document.getElementById('kpi-sickdays').textContent = sickdays.total;
-            
+
+            // === Überstunden (nur MA mit positiver Abweichung) ===
+            const overtimeEmployees = details.filter(d => d.deviation_hours > 0);
+            const totalOvertimeHours = overtimeEmployees.reduce((sum, d) => sum + d.deviation_hours, 0);
+            document.getElementById('kpi-overtime-plus').textContent = `+${formatNumber(totalOvertimeHours)} Std.`;
+            const overtimePlusInfo = document.getElementById('kpi-overtime-plus-info');
+            overtimePlusInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7,14L12,9L17,14H7Z"/></svg><span>${overtimeEmployees.length} MA über Soll</span>`;
+
+            // === Minusstunden (nur MA mit negativer Abweichung) ===
+            const minusEmployees = details.filter(d => d.deviation_hours < 0);
+            const totalMinusHours = minusEmployees.reduce((sum, d) => sum + d.deviation_hours, 0);
+            document.getElementById('kpi-overtime-minus').textContent = `${formatNumber(totalMinusHours)} Std.`;
+            const overtimeMinusInfo = document.getElementById('kpi-overtime-minus-info');
+            overtimeMinusInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7,10L12,15L17,10H7Z"/></svg><span>${minusEmployees.length} MA unter Soll</span>`;
+
+            // === Krankheitstage ===
+            document.getElementById('kpi-sickdays').textContent = Number(sickdays.total || 0).toLocaleString('de-DE');
             const sickInfo = document.getElementById('kpi-sickdays-info');
-            sickInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>${sickdays.total > 0 ? 'Im Zeitraum' : 'Keine'}</span>`;
+            sickInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>${Number(sickdays.total || 0) > 0 ? 'Im Zeitraum' : 'Keine'}</span>`;
             
-            // Daten für Modal speichern
-            currentPunctualityData = generateLateComers(data);
-            currentSickdaysData = sickdays.details;
-        }
-        
-        function calculatePunctuality(data) {
-            // Intelligente Pünktlichkeits-Berechnung
-            // Basiert auf der Annahme, dass die meisten Unternehmen flexible Arbeitszeiten haben
-            
-            const employeeCount = data.kpi?.employee_count || 1;
-            const totalEntries = data.kpi?.entry_count || 0;
-            
-            // Basis-Rate (90% als Standard für gute Firmen)
-            let baseRate = 92;
-            
-            // Anpassung basierend auf Einträgen pro Mitarbeiter
-            const entriesPerEmployee = totalEntries / employeeCount;
-            
-            // Weniger Einträge = möglicherweise höhere Unpünktlichkeit
-            if (entriesPerEmployee < 5) {
-                baseRate -= Math.floor(Math.random() * 10) + 5;
-            } else if (entriesPerEmployee > 20) {
-                baseRate += Math.floor(Math.random() * 5);
-            }
-            
-            // Etwas Varianz hinzufügen für Realismus
-            const variance = Math.floor(Math.random() * 8) - 4;
-            
-            return Math.min(100, Math.max(60, baseRate + variance));
-        }
-        
-        function generateLateComers(data) {
-            // Generiere Top 3 "Zuspätkommer" basierend auf Mitarbeiterdaten
-            const employees = data.employee_data?.full_names || [];
-            
-            if (employees.length === 0) {
-                return [
-                    { name: 'Keine Daten', lateCount: 0, avgMinutes: 0 }
-                ];
-            }
-            
-            // Zufällige Auswahl von 3 Mitarbeitern
-            const shuffled = [...employees].sort(() => 0.5 - Math.random());
-            const selected = shuffled.slice(0, Math.min(3, shuffled.length));
-            
-            return selected.map((name, index) => ({
-                name: name,
-                lateCount: Math.floor(Math.random() * 5) + 1 + (2 - index),
-                avgMinutes: Math.floor(Math.random() * 20) + 5 + (index * 3)
-            })).sort((a, b) => b.lateCount - a.lateCount);
-        }
-        
-        function calculateSickdays(data) {
-            // Krankheitstage basierend auf Mitarbeiteranzahl schätzen
-            const employeeCount = data.kpi?.employee_count || 0;
-            const employees = data.employee_data?.full_names || [];
-            
-            // Durchschnittlich 2-4% Krankheitsquote pro Monat
-            const sickRate = 0.03;
-            const estimatedDays = Math.round(employeeCount * sickRate * 22); // 22 Arbeitstage pro Monat
-            
-            // Generiere Details für Top 3
-            const shuffled = [...employees].sort(() => 0.5 - Math.random());
-            const details = shuffled.slice(0, Math.min(3, shuffled.length)).map((name, index) => ({
-                name: name,
-                days: Math.floor(Math.random() * 4) + 1 + (2 - index)
-            })).sort((a, b) => b.days - a.days);
-            
-            return {
-                total: estimatedDays,
-                details: details
-            };
+            // Daten für Modals speichern
+            currentPunctualityData = details;
+            currentOvertimeData = overtimeEmployees.sort((a, b) => b.deviation_hours - a.deviation_hours).slice(0, 3);
+            currentMinushoursData = minusEmployees.sort((a, b) => a.deviation_hours - b.deviation_hours).slice(0, 3);
+            currentSickdaysData = sickdays.details || [];
         }
         
         // ==================== KPI MODAL ====================
@@ -2019,8 +2247,14 @@
             const body = document.getElementById('kpiModalBody');
             
             if (type === 'punctuality') {
-                title.textContent = '🕐 Top 3 Zuspätkommer';
+                title.textContent = '📊 Pünktlichkeit – Soll vs. Ist';
                 body.innerHTML = renderPunctualityDetails();
+            } else if (type === 'overtime') {
+                title.textContent = '⬆️ Top 3 Überstunden';
+                body.innerHTML = renderOvertimeDetails();
+            } else if (type === 'minushours') {
+                title.textContent = '⬇️ Top 3 Minusstunden';
+                body.innerHTML = renderMinushoursDetails();
             } else if (type === 'sickdays') {
                 title.textContent = '🏥 Top 3 Krankheitstage';
                 body.innerHTML = renderSickdaysDetails();
@@ -2035,27 +2269,83 @@
         }
         
         function renderPunctualityDetails() {
-            if (currentPunctualityData.length === 0 || currentPunctualityData[0].name === 'Keine Daten') {
+            if (currentPunctualityData.length === 0) {
                 return '<p style="text-align: center; color: #64748b;">Keine Daten verfügbar</p>';
+            }
+            
+            const sorted = [...currentPunctualityData].sort((a, b) => b.adherence_percent - a.adherence_percent).slice(0, 5);
+            const ranks = ['gold', 'silver', 'bronze'];
+            
+            return `
+                <ul class="kpi-detail-list">
+                    ${sorted.map((item, index) => {
+                        const isOver = item.deviation_hours >= 0;
+                        const badgeClass = isOver ? 'early' : 'late';
+                        return `
+                        <li class="kpi-detail-item">
+                            <div class="kpi-detail-rank ${ranks[index] || ''}">${index + 1}</div>
+                            <div class="kpi-detail-info">
+                                <div class="kpi-detail-name">${item.name}</div>
+                                <div class="kpi-detail-value">Score ${item.adherence_percent}% · Soll ${formatHours(item.target_hours)} · Ist ${formatHours(item.productive_hours)}</div>
+                            </div>
+                            <span class="kpi-detail-badge ${badgeClass}">${formatSignedHours(item.deviation_hours)}</span>
+                        </li>`;
+                    }).join('')}
+                </ul>
+                <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
+                    * Pünktlichkeit = Wie nah ist die Ist-Zeit an der Soll-Zeit (100% = exakt)
+                </p>
+            `;
+        }
+
+        function renderOvertimeDetails() {
+            if (currentOvertimeData.length === 0) {
+                return '<p style="text-align: center; color: #64748b;">Keine Überstunden im Zeitraum</p>';
             }
             
             const ranks = ['gold', 'silver', 'bronze'];
             
             return `
                 <ul class="kpi-detail-list">
-                    ${currentPunctualityData.map((item, index) => `
+                    ${currentOvertimeData.map((item, index) => `
                         <li class="kpi-detail-item">
                             <div class="kpi-detail-rank ${ranks[index] || ''}">${index + 1}</div>
                             <div class="kpi-detail-info">
                                 <div class="kpi-detail-name">${item.name}</div>
-                                <div class="kpi-detail-value">${item.lateCount}x zu spät, Ø ${item.avgMinutes} Min</div>
+                                <div class="kpi-detail-value">Soll ${formatHours(item.target_hours)} · Ist ${formatHours(item.productive_hours)}</div>
                             </div>
-                            <span class="kpi-detail-badge late">${item.lateCount}x</span>
+                            <span class="kpi-detail-badge early">+${formatNumber(item.deviation_hours)} Std.</span>
                         </li>
                     `).join('')}
                 </ul>
                 <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
-                    * Basierend auf Arbeitsbeginn außerhalb der Kernzeit (06:00-09:30)
+                    * Überstunden = Ist-Stunden − Soll-Stunden
+                </p>
+            `;
+        }
+
+        function renderMinushoursDetails() {
+            if (currentMinushoursData.length === 0) {
+                return '<p style="text-align: center; color: #64748b;">Keine Minusstunden im Zeitraum</p>';
+            }
+            
+            const ranks = ['gold', 'silver', 'bronze'];
+            
+            return `
+                <ul class="kpi-detail-list">
+                    ${currentMinushoursData.map((item, index) => `
+                        <li class="kpi-detail-item">
+                            <div class="kpi-detail-rank ${ranks[index] || ''}">${index + 1}</div>
+                            <div class="kpi-detail-info">
+                                <div class="kpi-detail-name">${item.name}</div>
+                                <div class="kpi-detail-value">Soll ${formatHours(item.target_hours)} · Ist ${formatHours(item.productive_hours)}</div>
+                            </div>
+                            <span class="kpi-detail-badge late">${formatNumber(item.deviation_hours)} Std.</span>
+                        </li>
+                    `).join('')}
+                </ul>
+                <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
+                    * Minusstunden = Soll-Stunden − Ist-Stunden
                 </p>
             `;
         }
@@ -2081,7 +2371,7 @@
                     `).join('')}
                 </ul>
                 <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
-                    * Geschätzt basierend auf fehlenden Zeiteinträgen
+                    * Basierend auf MCtime Typen sick, medical_leave und work_accident_sickness.
                 </p>
             `;
         }
@@ -2315,9 +2605,12 @@
                     console.log('Daten geladen erfolgreich!');
                     updateKPIs(data.kpi);
                     updateCharts(data);
+                    currentChartData = data;
 
                     const periodTextEl = document.getElementById('selected-period-text');
-                    periodTextEl.textContent = customLabel || data.filter_label || 'Daten geladen';
+                    currentFilterLabel = customLabel || data.filter_label || 'Daten geladen';
+                    periodTextEl.textContent = currentFilterLabel;
+                    updateExportState(true);
 
                     loadTimeText.textContent = `Geladen in ${loadTime}s`;
                     loadTimeBadge.classList.add('visible');
@@ -2357,6 +2650,9 @@
 
             populateMonthDropdown(defaultYear, defaultMonth - 1);
             initCharts();
+            updateExportState(false);
+
+            document.getElementById('exportPdfBtn').addEventListener('click', exportChartsAsPdf);
 
             // Quartal-Jahr Dropdown füllen
             const quarterYearSelect = document.getElementById('quarterYearSelect');

@@ -694,7 +694,7 @@ class Middleware:
             last_name = name_parts[1] if len(name_parts) > 1 else ''
             
             writer.writerow([
-                entry.get('employee_id', ''),
+                entry.get('personnel_number', ''),
                 first_name,
                 last_name,
                 entry.get('date_formatted', ''),

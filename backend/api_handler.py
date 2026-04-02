@@ -11,6 +11,14 @@ class McTimeAPI:
             "content-type": "application/json",
             "API_KEY": api_key
         }
+
+    @staticmethod
+    def _normalize_personnel_number(value: Optional[str]) -> str:
+        """Normalisiert Personalnummern auf numerische Strings."""
+        if value is None:
+            return ""
+        digits_only = ''.join(ch for ch in str(value) if ch.isdigit())
+        return digits_only
     
     def get_organizations(self) -> List[Dict]:
         """
@@ -44,10 +52,43 @@ class McTimeAPI:
             print(f"Exception in get_organizations: {e}")
             return []
     
+    def _get_user_detail(self, user_id: str) -> Dict:
+        """Holt Detail-Daten eines Users über /users/{id} (enthält exportIds, userEmployments etc.)"""
+        url = f"{self.base_url}/users/{user_id}"
+        try:
+            response = requests.get(url, headers=self.headers)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("items", [{}])[0].get("data", {})
+            return {}
+        except Exception:
+            return {}
+
+    def _extract_personnel_number(self, detail: Dict) -> str:
+        """Extrahiert Personalnummer aus User-Detail-Daten.
+        Prüft: exportIds.exportId1/2/3, userEmployments[].basicData.employeeId/employmentId"""
+        # exportIds prüfen
+        export_ids = detail.get("exportIds", {})
+        for key in ("exportId1", "exportId2", "exportId3"):
+            val = export_ids.get(key)
+            if val:
+                return self._normalize_personnel_number(val)
+
+        # userEmployments prüfen
+        for emp in detail.get("userEmployments", []):
+            basic = emp.get("basicData", {})
+            for key in ("employeeId", "employmentId"):
+                val = basic.get(key)
+                if val:
+                    return self._normalize_personnel_number(val)
+
+        return ""
+
     def get_employees(self, organization_id: Optional[str] = None, organization_name: Optional[str] = None) -> List[Dict]:
         """
         Get list of employees/users
         Hinweis: Organisations-Filter deaktiviert (API-Berechtigungen fehlen)
+        Holt Personalnummern über den Detail-Endpoint /users/{id}.
         """
         url = f"{self.base_url}/users"
         params = {"roles": "employee"}
@@ -65,12 +106,20 @@ class McTimeAPI:
                     full_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
                     if not full_name:
                         full_name = "Unknown User"
+
+                    # Personalnummer aus Detail-Endpoint holen
+                    user_id = user.get("id", "")
+                    detail = self._get_user_detail(user_id) if user_id else {}
+                    personnel_number = self._extract_personnel_number(detail)
+
                     employees.append({
-                        "id": user.get("id"),
+                        "id": user_id,
                         "name": full_name,
                         "firstName": user.get("firstName", ""),
                         "lastName": user.get("lastName", ""),
-                        "email": user.get("email")
+                        "email": user.get("email"),
+                        "organizationId": user.get("organizationId"),
+                        "personnel_number": personnel_number
                     })
                 return sorted(employees, key=lambda x: x["name"])
             else:
@@ -93,6 +142,18 @@ class McTimeAPI:
         except Exception as e:
             print(f"Error getting user name: {e}")
             return 'Unknown User'
+
+    def get_user_by_id(self, user_id: str) -> Dict:
+        """Get complete user object by ID from /users endpoint."""
+        try:
+            employees = self.get_employees()
+            for employee in employees:
+                if employee.get('id') == user_id:
+                    return employee
+            return {}
+        except Exception as e:
+            print(f"Error getting user by id: {e}")
+            return {}
     
     def get_user_email_by_id(self, user_id: str) -> str:
         """
@@ -107,6 +168,69 @@ class McTimeAPI:
         except Exception as e:
             print(f"Error getting user email: {e}")
             return ''
+
+    def get_analytics(
+        self,
+        analytics_from: str,
+        analytics_to: str,
+        user_ids: Optional[List[str]] = None,
+        organization_ids: Optional[List[str]] = None,
+        time_types: Optional[List[str]] = None,
+        approval_statuses: Optional[List[str]] = None,
+        recipient_emails: Optional[List[str]] = None,
+        sub_organizations: bool = True
+    ) -> Dict:
+        """Loads analytics totals from McTime for the given filter scope."""
+        url = f"{self.base_url}/analytics"
+        recipient_list = recipient_emails or [os.getenv('SENDER_EMAIL', 'noreply@example.com')]
+
+        payload = {
+            "analyticsFrom": analytics_from,
+            "analyticsTo": analytics_to,
+            "exportType": {
+                "pdf": {
+                    "export": False,
+                    "employeeAnalytics": False,
+                    "allAnalytics": False,
+                    "timeEntries": False
+                },
+                "csv": {
+                    "export": False,
+                    "csvDelimiter": ";"
+                },
+                "json": {
+                    "export": True
+                }
+            },
+            "recipientEmails": recipient_list,
+            "emailMessage": "",
+            "userIds": user_ids or [],
+            "organizationIds": organization_ids or [],
+            "subOrganizations": sub_organizations,
+            "approvalStatuses": approval_statuses or [],
+            "timeTypes": time_types or []
+        }
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            if response.status_code != 200:
+                print(f"Error fetching analytics: {response.status_code}")
+                print(f"Analytics response: {response.text}")
+                return {}
+
+            data = response.json()
+            items = data.get("items", [])
+            if not items:
+                return {}
+
+            first_item = items[0]
+            if first_item.get("message") != "Success!":
+                return {}
+
+            return first_item.get("data", {}) or {}
+        except Exception as e:
+            print(f"Exception in get_analytics: {e}")
+            return {}
     
     def _enhance_time_record(self, time_record: Dict) -> Dict:
         """
@@ -228,8 +352,8 @@ class McTimeAPI:
                 time_entries = data.get("items", [])
                 all_times = []
                 
-                # Get user name from the /users endpoint (same as dropdown)
-                user_name = self.get_user_name_by_id(employee_id)
+                employee = self.get_user_by_id(employee_id)
+                user_name = employee.get('name') or 'Unknown User'
                 print(f"Got user name from /users endpoint: '{user_name}'")
                 
                 for item in time_entries:
@@ -244,6 +368,9 @@ class McTimeAPI:
                                         # Add the user name from /users API (same as dropdown)
                                         time_record['name'] = user_name
                                         time_record['id'] = employee_id
+                                        time_record['first_name'] = employee.get('firstName', '')
+                                        time_record['last_name'] = employee.get('lastName', '')
+                                        time_record['personnel_number'] = employee.get('personnel_number', '')
                                         
                                         # Calculate work hours and format breaks
                                         time_record = self._enhance_time_record(time_record)
