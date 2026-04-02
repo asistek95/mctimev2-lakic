@@ -1,4 +1,5 @@
 import requests
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -14,7 +15,8 @@ class McTimeAPI:
     def get_organizations(self) -> List[Dict]:
         """
         Get list of organizations (companies/firms)
-        Filtert nur DiploTGM (Infocom GmbH entfernt wegen fehlender Berechtigungen)
+        Gibt alle verfuegbaren Organizations fuer den API-Key zurueck.
+        Optional kann mit MCTIME_ORGANIZATION_FILTER auf einen Firmennamen gefiltert werden.
         """
         url = f"{self.base_url}/organizations"
         try:
@@ -22,13 +24,19 @@ class McTimeAPI:
             if response.status_code == 200:
                 data = response.json()
                 organizations = data.get("items", [{}])[0].get("data", {}).get("organizations", [])
-                # Nur DiploTGM zurückgeben (Infocom GmbH ausschließen)
-                filtered_orgs = [
+                mapped_orgs = [
                     {"id": org.get("id"), "name": org.get("organizationName")}
                     for org in organizations
-                    if org.get("organizationName") != "Infocom GmbH"
                 ]
-                return filtered_orgs
+
+                org_filter = os.getenv("MCTIME_ORGANIZATION_FILTER", "").strip().lower()
+                if org_filter:
+                    mapped_orgs = [
+                        org for org in mapped_orgs
+                        if (org.get("name") or "").strip().lower() == org_filter
+                    ]
+
+                return mapped_orgs
             else:
                 print(f"Error fetching organizations: {response.status_code}")
                 return []

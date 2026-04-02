@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, jsonify, request, Response, session, redirect, url_for
 import os
 import io
 import csv
@@ -36,12 +36,14 @@ except ImportError:
     print("Using environment variables directly.")
 
 # Importiere Backend und Middleware
+import middleware.core as middleware_core
 from middleware.core import Middleware, get_middleware
-from backend.api_handler import BackendService
+from backend.api_handler import BackendService, McTimeAPI
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # ==================== HYBRID ARCHITEKTUR ====================
 # Frontend → Middleware → Backend → McTime API
@@ -114,6 +116,104 @@ def clear_cache():
     global _cache
     _cache = {}
 
+
+def _env_file_path() -> str:
+    return os.path.join(os.path.dirname(__file__), '..', '.env')
+
+
+def _mask_key(value: str) -> str:
+    if not value:
+        return "nicht gesetzt"
+    if len(value) <= 8:
+        return "****"
+    return f"{value[:4]}...{value[-4:]}"
+
+
+def _upsert_env_values(values: dict) -> None:
+    env_path = _env_file_path()
+
+    existing_lines = []
+    if os.path.exists(env_path):
+        with open(env_path, 'r', encoding='utf-8') as f:
+            existing_lines = f.readlines()
+
+    updated_keys = set()
+    new_lines = []
+
+    for line in existing_lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#') or '=' not in stripped:
+            new_lines.append(line)
+            continue
+
+        key = stripped.split('=', 1)[0].strip()
+        if key in values:
+            new_lines.append(f"{key}={values[key]}\n")
+            updated_keys.add(key)
+        else:
+            new_lines.append(line)
+
+    for key, value in values.items():
+        if key not in updated_keys:
+            new_lines.append(f"{key}={value}\n")
+
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
+
+def _reinitialize_services(new_api_key: str) -> dict:
+    global API_KEY, backend_service, middleware
+
+    API_KEY = new_api_key
+    os.environ['MCTIME_API_KEY'] = new_api_key
+
+    backend_error = None
+    middleware_error = None
+
+    try:
+        backend_service = BackendService(API_KEY) if API_KEY else None
+    except Exception as e:
+        backend_service = None
+        backend_error = str(e)
+
+    try:
+        middleware_core._middleware_instance = None
+        middleware = get_middleware(API_KEY) if API_KEY else None
+    except Exception as e:
+        middleware = None
+        middleware_error = str(e)
+
+    clear_cache()
+
+    return {
+        "backend_ok": backend_service is not None,
+        "middleware_ok": middleware is not None,
+        "backend_error": backend_error,
+        "middleware_error": middleware_error
+    }
+
+
+def _validate_mctime_api_key(api_key: str) -> dict:
+    api = McTimeAPI(api_key)
+    orgs = api.get_organizations()
+    valid = isinstance(orgs, list) and len(orgs) > 0
+
+    return {
+        "valid": valid,
+        "organizations": orgs,
+        "organization_count": len(orgs) if isinstance(orgs, list) else 0
+    }
+
+
+def _is_dev_authenticated() -> bool:
+    return bool(session.get('dev_authenticated'))
+
+
+def _require_dev_login():
+    if not _is_dev_authenticated():
+        return redirect(url_for('developer_login'))
+    return None
+
 if not API_KEY:
     print("WARNING: MCTIME_API_KEY environment variable not set!")
     print("Please configure your .env file with MCTIME_API_KEY")
@@ -170,6 +270,167 @@ def home():
 def api_config():
     """Middleware-Konfigurationsseite"""
     return render_template('api_config.html')
+
+
+@app.route('/developer/login', methods=['GET', 'POST'])
+def developer_login():
+    """Einfaches Login fuer das Developer-Panel"""
+    configured_password = os.getenv('DEV_PANEL_PASSWORD', '').strip()
+
+    if request.method == 'POST':
+        submitted_password = (request.form.get('password') or '').strip()
+
+        if not configured_password:
+            return render_template('developer_connect.html',
+                                 login_required=True,
+                                 login_error='DEV_PANEL_PASSWORD ist nicht gesetzt. Bitte in .env konfigurieren.')
+
+        if submitted_password == configured_password:
+            session['dev_authenticated'] = True
+            return redirect(url_for('developer_connect'))
+
+        return render_template('developer_connect.html',
+                             login_required=True,
+                             login_error='Falsches Passwort.')
+
+    return render_template('developer_connect.html', login_required=True)
+
+
+@app.route('/developer/logout', methods=['POST'])
+def developer_logout():
+    session.pop('dev_authenticated', None)
+    return redirect(url_for('developer_login'))
+
+
+@app.route('/developer/login-api', methods=['POST'])
+def developer_login_api():
+    """Login fuer Unternehmensanbindung im Einstellungen-Tab"""
+    configured_password = os.getenv('DEV_PANEL_PASSWORD', '').strip()
+    payload = request.get_json(silent=True) or {}
+    submitted_password = (payload.get('password') or '').strip()
+
+    if not configured_password:
+        return jsonify({"success": False, "message": "DEV_PANEL_PASSWORD ist nicht gesetzt."}), 400
+
+    if submitted_password != configured_password:
+        return jsonify({"success": False, "message": "Falsches Passwort."}), 401
+
+    session['dev_authenticated'] = True
+    return jsonify({"success": True, "message": "Login erfolgreich."})
+
+
+@app.route('/developer/logout-api', methods=['POST'])
+def developer_logout_api():
+    """Logout fuer Unternehmensanbindung im Einstellungen-Tab"""
+    session.pop('dev_authenticated', None)
+    return jsonify({"success": True, "message": "Logout erfolgreich."})
+
+
+@app.route('/developer/connect/status', methods=['GET'])
+def developer_connect_status():
+    """Statusdaten fuer Unternehmensanbindung im Einstellungen-Tab"""
+    current_key = os.getenv('MCTIME_API_KEY', '')
+    current_company_name = os.getenv('APP_COMPANY_NAME', 'McTime')
+    current_org_filter = os.getenv('MCTIME_ORGANIZATION_FILTER', '')
+
+    return jsonify({
+        "authenticated": _is_dev_authenticated(),
+        "current_key_masked": _mask_key(current_key),
+        "current_company_name": current_company_name,
+        "current_org_filter": current_org_filter
+    })
+
+
+@app.route('/developer/connect', methods=['GET'])
+def developer_connect():
+    """Developer-Seite fuer API-Key-Anbindung pro Kunde/Firma"""
+    guard = _require_dev_login()
+    if guard:
+        return guard
+
+    current_key = os.getenv('MCTIME_API_KEY', '')
+    current_company_name = os.getenv('APP_COMPANY_NAME', 'McTime')
+
+    return render_template(
+        'developer_connect.html',
+        login_required=False,
+        current_key_masked=_mask_key(current_key),
+        current_company_name=current_company_name
+    )
+
+
+@app.route('/developer/connect/test', methods=['POST'])
+def developer_connect_test():
+    """Prueft den uebergebenen API-Key gegen McTime /organizations"""
+    if not _is_dev_authenticated():
+        return jsonify({"success": False, "message": "Nicht eingeloggt"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    api_key = (payload.get('api_key') or '').strip()
+
+    if not api_key:
+        return jsonify({"success": False, "message": "API-Key fehlt"}), 400
+
+    try:
+        validation = _validate_mctime_api_key(api_key)
+        if not validation['valid']:
+            return jsonify({
+                "success": False,
+                "message": "API-Key konnte nicht validiert werden oder liefert keine Organizations.",
+                "organization_count": validation['organization_count']
+            }), 400
+
+        return jsonify({
+            "success": True,
+            "message": "API-Key ist gueltig.",
+            "organization_count": validation['organization_count'],
+            "organizations": validation['organizations']
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Validierung fehlgeschlagen: {str(e)}"}), 500
+
+
+@app.route('/developer/connect/save', methods=['POST'])
+def developer_connect_save():
+    """Speichert API-Key/Firmennamen in .env und startet Services neu"""
+    if not _is_dev_authenticated():
+        return jsonify({"success": False, "message": "Nicht eingeloggt"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    api_key = (payload.get('api_key') or '').strip()
+    company_name = (payload.get('company_name') or '').strip() or 'McTime'
+    organization_filter = (payload.get('organization_filter') or '').strip()
+
+    if not api_key:
+        return jsonify({"success": False, "message": "API-Key fehlt"}), 400
+
+    try:
+        validation = _validate_mctime_api_key(api_key)
+        if not validation['valid']:
+            return jsonify({
+                "success": False,
+                "message": "API-Key ist ungueltig oder liefert keine Organisationsdaten."
+            }), 400
+
+        _upsert_env_values({
+            'MCTIME_API_KEY': api_key,
+            'APP_COMPANY_NAME': company_name,
+            'MCTIME_ORGANIZATION_FILTER': organization_filter
+        })
+
+        os.environ['APP_COMPANY_NAME'] = company_name
+        os.environ['MCTIME_ORGANIZATION_FILTER'] = organization_filter
+        reinit_status = _reinitialize_services(api_key)
+
+        return jsonify({
+            "success": True,
+            "message": "API-Key erfolgreich gespeichert und Dienste neu geladen.",
+            "organization_count": validation['organization_count'],
+            "organizations": validation['organizations'],
+            "service_status": reinit_status
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Speichern fehlgeschlagen: {str(e)}"}), 500
 
 @app.route('/charts')
 def charts():

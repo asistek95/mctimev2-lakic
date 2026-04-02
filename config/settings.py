@@ -19,12 +19,18 @@ class Settings:
     MCTIME_BASE_URL: str = os.getenv('MCTIME_BASE_URL', 'https://mctime.com/api/v2/auth')
     
     # SMTP / Email
+    EMAIL_METHOD: str = os.getenv('EMAIL_METHOD', 'smtp').lower()
     SMTP_SERVER: str = os.getenv('SMTP_SERVER', '')
     SMTP_PORT: int = int(os.getenv('SMTP_PORT', '587'))
     SMTP_USERNAME: str = os.getenv('SMTP_USERNAME', '')
     SMTP_PASSWORD: str = os.getenv('SMTP_PASSWORD', '')
     SENDER_EMAIL: str = os.getenv('SENDER_EMAIL', '')
     USE_TLS: bool = os.getenv('USE_TLS', 'true').lower() == 'true'
+    # Resend API (Railway-kompatibel, kein SMTP nötig)
+    RESEND_API_KEY: str = os.getenv('RESEND_API_KEY', '')
+
+    # Branding
+    APP_COMPANY_NAME: str = os.getenv('APP_COMPANY_NAME', 'McTime')
     
     # Flask
     FLASK_SECRET_KEY: str = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')

@@ -4,8 +4,6 @@
 .env.*.local
 *.env
 
-.
-
 # Python
 __pycache__/
 *.py[cod]
@@ -33,7 +31,16 @@ MANIFEST
 venv/
 ENV/
 env/
-.venv
+.venv/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.python-version
 
 # IDE
 .vscode/

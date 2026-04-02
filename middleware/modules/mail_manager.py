@@ -4,9 +4,11 @@ Mail Manager - Modul für Mailversand-Funktionalität
 
 import os
 import smtplib
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Optional
+import requests as http_requests
 
 
 class MailManager:
@@ -23,6 +25,9 @@ class MailManager:
         """
         self.request_handler = request_handler
         
+        # E-Mail-Methode: "smtp" oder "resend"
+        self.email_method = os.getenv("EMAIL_METHOD", "smtp").lower()
+
         # SMTP-Konfiguration aus Umgebungsvariablen
         self.smtp_server = os.getenv("SMTP_SERVER")
         self.smtp_port = int(os.getenv("SMTP_PORT", 587))
@@ -30,14 +35,19 @@ class MailManager:
         self.smtp_password = os.getenv("SMTP_PASSWORD")
         self.sender_email = os.getenv("SENDER_EMAIL")
         self.use_tls = os.getenv("USE_TLS", "true").lower() == "true"
+
+        # Resend-Konfiguration
+        self.resend_api_key = os.getenv("RESEND_API_KEY", "")
     
     def is_configured(self) -> bool:
         """
-        Prüft ob SMTP konfiguriert ist
+        Prüft ob E-Mail-Versand konfiguriert ist (SMTP oder Resend).
         
         Returns:
             True wenn alle erforderlichen Variablen gesetzt sind
         """
+        if self.email_method == "resend":
+            return bool(self.resend_api_key and self.sender_email)
         return all([
             self.smtp_server,
             self.smtp_username,
@@ -281,9 +291,23 @@ class MailManager:
             True bei Erfolg
         """
         if not self.is_configured():
-            print("FEHLER: SMTP nicht konfiguriert!")
-            print("Bitte setze: SMTP_SERVER, SMTP_USERNAME, SMTP_PASSWORD, SENDER_EMAIL")
+            if self.email_method == "resend":
+                print("FEHLER: Resend nicht konfiguriert!")
+                print("Bitte setze: RESEND_API_KEY, SENDER_EMAIL")
+            else:
+                print("FEHLER: SMTP nicht konfiguriert!")
+                print("Bitte setze: SMTP_SERVER, SMTP_USERNAME, SMTP_PASSWORD, SENDER_EMAIL")
             return False
+
+        if self.email_method == "resend":
+            return self._send_via_resend(
+                to_email=to_email,
+                subject=subject,
+                html_body=html_body,
+                cc_email=cc_email,
+                csv_content=csv_content,
+                csv_filename=csv_filename,
+            )
         
         try:
             print("=== E-MAIL VERSENDEN ===")
@@ -355,10 +379,72 @@ class MailManager:
         except Exception as e:
             print(f"E-Mail Versandfehler: {e}")
             return False
-    
+
+    def _send_via_resend(
+        self,
+        to_email: str,
+        subject: str,
+        html_body: str,
+        cc_email: str = None,
+        csv_content: str = None,
+        csv_filename: str = None,
+    ) -> bool:
+        """
+        Sendet E-Mail über die Resend HTTP API (kein SMTP, funktioniert auf Railway).
+        """
+        try:
+            print("=== E-MAIL VERSENDEN (Resend API) ===")
+            print(f"Von: {self.sender_email}")
+            print(f"An: {to_email}")
+            print(f"CC: {cc_email if cc_email else 'Keine'}")
+            print(f"Betreff: {subject}")
+
+            to_list = [e.strip() for e in to_email.split(',') if e.strip()]
+            cc_list = [e.strip() for e in cc_email.split(',') if e.strip()] if cc_email else []
+
+            payload: dict = {
+                "from": self.sender_email,
+                "to": to_list,
+                "subject": subject,
+                "html": html_body,
+            }
+            if cc_list:
+                payload["cc"] = cc_list
+
+            # CSV-Anhang als base64-Attachment
+            if csv_content and csv_filename:
+                import base64
+                encoded = base64.b64encode(csv_content.encode("utf-8")).decode("ascii")
+                payload["attachments"] = [{
+                    "filename": csv_filename,
+                    "content": encoded,
+                    "content_type": "text/csv",
+                }]
+
+            resp = http_requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {self.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps(payload),
+                timeout=15,
+            )
+
+            if resp.status_code in (200, 201):
+                print(f"[OK] E-Mail über Resend gesendet: {resp.json().get('id', '')}")
+                return True
+            else:
+                print(f"Resend API Fehler {resp.status_code}: {resp.text}")
+                return False
+
+        except Exception as e:
+            print(f"Resend Versandfehler: {e}")
+            return False
+
     def test_connection(self) -> Dict:
         """
-        Testet SMTP-Verbindung
+        Testet E-Mail-Verbindung (SMTP oder Resend).
         
         Returns:
             Dict mit Test-Ergebnis
@@ -366,8 +452,21 @@ class MailManager:
         if not self.is_configured():
             return {
                 "status": "error",
-                "message": "SMTP nicht konfiguriert"
+                "message": "E-Mail nicht konfiguriert (EMAIL_METHOD, SMTP_* oder RESEND_API_KEY prüfen)"
             }
+
+        if self.email_method == "resend":
+            try:
+                resp = http_requests.get(
+                    "https://api.resend.com/domains",
+                    headers={"Authorization": f"Bearer {self.resend_api_key}"},
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    return {"status": "success", "message": "Resend API-Key gültig"}
+                return {"status": "error", "message": f"Resend API-Key ungültig ({resp.status_code})"}
+            except Exception as e:
+                return {"status": "error", "message": f"Resend-Verbindung fehlgeschlagen: {e}"}
         
         try:
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)

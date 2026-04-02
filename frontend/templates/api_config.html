@@ -67,6 +67,12 @@
                 </svg>
                 Middleware
             </button>
+            <button class="dev-tab" data-tab="company" onclick="switchTab('company')">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                    <path fill="currentColor" d="M7,8A3,3 0 0,1 10,5A3,3 0 0,1 13,8A3,3 0 0,1 10,11A3,3 0 0,1 7,8M14,20V17C14,15.67 11.33,15 10,15C8.67,15 6,15.67 6,17V20H14M16,7V10H19V12H16V15H14V12H11V10H14V7H16Z"/>
+                </svg>
+                Unternehmensanbindung
+            </button>
         </div>
 
         <!-- Tab Content: Status -->
@@ -477,6 +483,56 @@
                 </div>
             </div>
         </div><!-- Ende Tab Middleware -->
+
+        <!-- Tab Content: Unternehmensanbindung -->
+        <div class="tab-content" id="tab-company">
+            <div class="card" style="margin-top: 0;">
+                <h2 class="card-title">Unternehmensanbindung (API-Key Onboarding)</h2>
+                <p style="color:#64748b; margin-top: 0;">Hier kann ein Kunde seinen McTime API-Key testen und aktivieren. Optional kann auf genau eine Firma gefiltert werden.</p>
+
+                <div id="company-login-box" class="company-panel">
+                    <h3 style="margin-top:0;">Login</h3>
+                    <div class="company-grid">
+                        <div>
+                            <label class="status-label">Panel Passwort</label>
+                            <input id="company-login-password" type="password" class="company-input" placeholder="DEV_PANEL_PASSWORD">
+                        </div>
+                    </div>
+                    <div class="company-actions">
+                        <button class="btn btn-primary" onclick="companyLogin()">Einloggen</button>
+                    </div>
+                </div>
+
+                <div id="company-config-box" class="company-panel" style="display:none;">
+                    <h3 style="margin-top:0;">Anbindung konfigurieren</h3>
+                    <div class="company-grid">
+                        <div>
+                            <label class="status-label">Aktueller Key</label>
+                            <div id="company-current-key" class="company-info">-</div>
+                        </div>
+                        <div>
+                            <label class="status-label">Branding Firmenname</label>
+                            <input id="company-name" class="company-input" placeholder="z.B. Infocom GmbH">
+                        </div>
+                        <div>
+                            <label class="status-label">Neuer McTime API-Key</label>
+                            <input id="company-api-key" type="password" class="company-input" placeholder="API-Key eingeben">
+                        </div>
+                        <div>
+                            <label class="status-label">Nur diese Firma anzeigen (optional)</label>
+                            <input id="company-org-filter" class="company-input" placeholder="z.B. Infocom GmbH">
+                        </div>
+                    </div>
+                    <div class="company-actions">
+                        <button class="btn btn-primary" onclick="companyTestKey()">Key testen</button>
+                        <button class="btn btn-primary" style="background:#059669;" onclick="companySaveKey()">Speichern & aktivieren</button>
+                        <button class="btn btn-secondary" onclick="companyLogout()">Logout</button>
+                    </div>
+                </div>
+
+                <div id="company-result" class="company-result">Bereit.</div>
+            </div>
+        </div><!-- Ende Tab Unternehmensanbindung -->
     </main>
 
     <style>
@@ -1085,12 +1141,64 @@
             font-size: 13px;
             color: #64748b;
         }
+
+        .company-panel {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+
+        .company-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 6px;
+            box-sizing: border-box;
+        }
+
+        .company-info {
+            margin-top: 6px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #1e3a8a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-family: monospace;
+        }
+
+        .company-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .company-result {
+            margin-top: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            padding: 12px;
+            white-space: pre-wrap;
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             loadSystemStatus();
             loadArchitectureStatus();
+            loadCompanyPanelStatus();
 
             // Reset Button explizit binden
             const resetBtn = document.getElementById('arch-reset-btn');
@@ -1180,6 +1288,134 @@
             if (tabName === 'middleware') {
                 loadArchitectureStatus();
             }
+
+            if (tabName === 'company') {
+                loadCompanyPanelStatus();
+            }
+        }
+
+        async function loadCompanyPanelStatus() {
+            const result = document.getElementById('company-result');
+            try {
+                const response = await fetch('/developer/connect/status');
+                const data = await response.json();
+
+                const loginBox = document.getElementById('company-login-box');
+                const configBox = document.getElementById('company-config-box');
+
+                if (data.authenticated) {
+                    loginBox.style.display = 'none';
+                    configBox.style.display = 'block';
+                    document.getElementById('company-current-key').textContent = data.current_key_masked || '-';
+                    document.getElementById('company-name').value = data.current_company_name || '';
+                    document.getElementById('company-org-filter').value = data.current_org_filter || '';
+                    result.textContent = 'Eingeloggt. Du kannst Key testen und speichern.';
+                } else {
+                    loginBox.style.display = 'block';
+                    configBox.style.display = 'none';
+                    result.textContent = 'Bitte einloggen, um API-Key-Unternehmensanbindung zu bearbeiten.';
+                }
+            } catch (e) {
+                result.textContent = 'Fehler beim Laden des Panel-Status: ' + e.message;
+            }
+        }
+
+        async function companyLogin() {
+            const password = (document.getElementById('company-login-password').value || '').trim();
+            const result = document.getElementById('company-result');
+
+            if (!password) {
+                result.textContent = 'Bitte Passwort eingeben.';
+                return;
+            }
+
+            const response = await fetch('/developer/login-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                result.textContent = 'Login fehlgeschlagen: ' + (data.message || 'Unbekannter Fehler');
+                return;
+            }
+
+            document.getElementById('company-login-password').value = '';
+            await loadCompanyPanelStatus();
+        }
+
+        async function companyLogout() {
+            const result = document.getElementById('company-result');
+            const response = await fetch('/developer/logout-api', { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                result.textContent = 'Logout fehlgeschlagen.';
+                return;
+            }
+            await loadCompanyPanelStatus();
+        }
+
+        async function companyTestKey() {
+            const result = document.getElementById('company-result');
+            const apiKey = (document.getElementById('company-api-key').value || '').trim();
+
+            if (!apiKey) {
+                result.textContent = 'Bitte API-Key eingeben.';
+                return;
+            }
+
+            result.textContent = 'Teste API-Key...';
+            const response = await fetch('/developer/connect/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: apiKey })
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                result.textContent = 'Fehler: ' + (data.message || 'API-Key Test fehlgeschlagen');
+                return;
+            }
+
+            const names = (data.organizations || []).map(o => o.name || o.organizationName).join(' | ');
+            result.textContent = 'Key gueltig. Organizations: ' + data.organization_count + '\n' + names;
+        }
+
+        async function companySaveKey() {
+            const result = document.getElementById('company-result');
+            const apiKey = (document.getElementById('company-api-key').value || '').trim();
+            const companyName = (document.getElementById('company-name').value || '').trim();
+            const organizationFilter = (document.getElementById('company-org-filter').value || '').trim();
+
+            if (!apiKey) {
+                result.textContent = 'Bitte API-Key eingeben.';
+                return;
+            }
+
+            result.textContent = 'Speichere Konfiguration und lade Services neu...';
+
+            const response = await fetch('/developer/connect/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    company_name: companyName,
+                    organization_filter: organizationFilter
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                result.textContent = 'Fehler: ' + (data.message || 'Speichern fehlgeschlagen');
+                return;
+            }
+
+            const names = (data.organizations || []).map(o => o.name || o.organizationName).join(' | ');
+            result.textContent = 'Gespeichert und aktiv.\nOrganizations: ' + data.organization_count + '\n' + names;
+            document.getElementById('company-api-key').value = '';
+            await loadCompanyPanelStatus();
+            loadSystemStatus();
         }
 
         // Architecture Status Loading

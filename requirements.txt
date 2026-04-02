@@ -14,3 +14,4 @@ python-dotenv>=0.19.0
 
 # Email (built-in with Python)
 # smtplib, email.mime - included in standard library
+# Resend API uses the 'requests' package above (no extra dependency needed)

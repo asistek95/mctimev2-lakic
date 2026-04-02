@@ -589,6 +589,8 @@ class Middleware:
                     <p style="margin: 10px 0 0 0; white-space: pre-wrap;">{custom_message}</p>
                 </div>
             """
+
+        company_name = os.getenv("APP_COMPANY_NAME", "McTime")
         
         html = f"""
         <!DOCTYPE html>
@@ -654,7 +656,7 @@ class Middleware:
                 <div class="footer">
                     <p style="margin: 0; font-size: 12px; color: #64748b;">
                         Diese E-Mail wurde automatisch vom McTime Data API Bridge System generiert.<br>
-                        © 2025 McTime - Infocom GmbH
+                        © 2025 McTime - {company_name}
                     </p>
                 </div>
             </div>
