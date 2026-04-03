@@ -420,7 +420,7 @@
             color: #3b82f6;
         }
 
-        .spinner {
+        .spinner, .spin {
             animation: spin 1s linear infinite;
         }
 
@@ -794,6 +794,259 @@
             color: #1e40af;
             font-weight: 500;
             font-size: 0.95rem;
+        }
+
+        /* Monats-Grid */
+        .month-year-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .month-year-tab {
+            padding: 8px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #64748b;
+            transition: all 0.2s ease;
+        }
+        .month-year-tab:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .month-year-tab.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .month-grid-btn {
+            padding: 12px 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #334155;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .month-grid-btn:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #2563eb;
+        }
+        .month-grid-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+        .month-grid-btn.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .month-grid-btn .month-short {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .month-grid-btn .month-num {
+            display: block;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .month-grid-btn.active .month-num {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Dynamische Legende */
+        .chart-legend-dynamic {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 0.82rem;
+            color: #475569;
+        }
+        .chart-legend-dynamic .legend-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chart-legend-dynamic .legend-stat strong {
+            color: #1e293b;
+        }
+
+        /* Email Share Section */
+        .email-share-section {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+            margin-top: 24px;
+        }
+        .email-share-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .email-share-header .email-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+        .email-share-header .email-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .email-share-header .email-subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .email-share-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .email-share-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .email-share-form .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        .email-share-form label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .email-share-form input[type="email"],
+        .email-share-form input[type="text"],
+        .email-share-form textarea {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .email-share-form input:focus,
+        .email-share-form textarea:focus {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .email-share-form textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .chart-select-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .chart-select-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .chart-select-item:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .chart-select-item.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .chart-select-item input[type="checkbox"] {
+            accent-color: #3b82f6;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .chart-select-item .chart-select-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #334155;
+        }
+        .email-share-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .email-send-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .email-send-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+        }
+        .email-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .email-send-status {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .email-send-status.success { color: #16a34a; font-weight: 600; }
+        .email-send-status.error { color: #dc2626; font-weight: 600; }
+        @media (max-width: 768px) {
+            .email-share-form {
+                grid-template-columns: 1fr;
+            }
+            .chart-select-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* Loading Warning Modern */
@@ -1321,14 +1574,8 @@
                     <div class="filter-detail-section">
                         <!-- Monat Auswahl -->
                         <div class="filter-detail" id="detail-month">
-                            <label>Monat auswählen:</label>
-                            <select class="filter-select-modern" id="monthSelect">
-                                <option value="" disabled selected>Monat wählen...</option>
-                            </select>
-                            <button class="load-data-btn" id="loadMonthBtn">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
-                                Daten laden
-                            </button>
+                            <div class="month-year-tabs" id="monthYearTabs"></div>
+                            <div class="month-grid" id="monthGrid"></div>
                         </div>
                         
                         <!-- Quartal Auswahl -->
@@ -1342,10 +1589,7 @@
                             </div>
                             <div class="year-select-row">
                                 <label>Jahr:</label>
-                                <select class="filter-select-modern" id="quarterYearSelect">
-                                    <option value="2025" selected>2025</option>
-                                    <option value="2024">2024</option>
-                                </select>
+                                <select class="filter-select-modern" id="quarterYearSelect"></select>
                             </div>
                             <button class="load-data-btn" id="loadQuarterBtn">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
@@ -1616,10 +1860,13 @@
                 <div class="chart-container" style="height: 300px;">
                     <canvas id="trendChart"></canvas>
                 </div>
-                <div class="chart-legend">
+                <div class="chart-legend" id="trendLegend">
                     <div class="legend-item">
                         <span class="legend-dot blue"></span>
-                        <span>Tägliche Arbeitsstunden</span>
+                        <span>Stunden pro Tag</span>
+                    </div>
+                    <div class="legend-item" style="margin-left:auto;font-weight:600;color:#334155;">
+                        <span id="trendLegendSummary">Ø 0 h/Tag · Gesamt: 0 h</span>
                     </div>
                 </div>
             </div>
@@ -1638,25 +1885,91 @@
                 <div class="chart-container" style="height: 300px;">
                     <canvas id="teamChart"></canvas>
                 </div>
-                <!-- Legende für Farben -->
-                <div class="chart-legend">
+                <!-- Legende für Farben (dynamisch) -->
+                <div class="chart-legend" id="teamLegend">
                     <div class="legend-item">
                         <span class="legend-dot green"></span>
-                        <span>Viele Stunden</span>
+                        <span id="teamLegendGreen">Über Durchschnitt</span>
                     </div>
                     <div class="legend-item">
                         <span class="legend-dot blue"></span>
-                        <span>Mittlere Stunden</span>
+                        <span id="teamLegendBlue">Im Durchschnitt</span>
                     </div>
                     <div class="legend-item">
                         <span class="legend-dot orange"></span>
-                        <span>Wenig Stunden</span>
+                        <span id="teamLegendOrange">Unter Durchschnitt</span>
+                    </div>
+                    <div class="legend-item" style="margin-left:auto;font-weight:600;color:#334155;">
+                        <span id="teamLegendAvg">Ø 0 h</span>
                     </div>
                 </div>
             </div>
             
             <!-- Wochentag Chart Legende -->
         </div>
+
+        <!-- E-Mail Grafik-Versand -->
+        <div class="email-share-section" id="emailShareSection">
+            <div class="email-share-header">
+                <div class="email-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="email-title">Grafiken per E-Mail teilen</div>
+                    <div class="email-subtitle">Wählen Sie Grafiken aus und versenden Sie diese direkt an Kollegen oder Vorgesetzte</div>
+                </div>
+            </div>
+
+            <div class="email-share-form">
+                <div class="form-group">
+                    <label>Empfänger E-Mail</label>
+                    <input type="email" id="shareEmailTo" placeholder="empfaenger@firma.at" required>
+                </div>
+                <div class="form-group">
+                    <label>Betreff</label>
+                    <input type="text" id="shareEmailSubject" placeholder="Wird automatisch generiert...">
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Grafiken auswählen</label>
+                    <div class="chart-select-grid">
+                        <label class="chart-select-item" data-chart="weekday">
+                            <input type="checkbox" value="weekday" checked>
+                            <span class="chart-select-label">Arbeitszeiten pro Wochentag</span>
+                        </label>
+                        <label class="chart-select-item" data-chart="project">
+                            <input type="checkbox" value="project" checked>
+                            <span class="chart-select-label">Projektverteilung</span>
+                        </label>
+                        <label class="chart-select-item" data-chart="trend">
+                            <input type="checkbox" value="trend" checked>
+                            <span class="chart-select-label">Arbeitsstunden pro Monat</span>
+                        </label>
+                        <label class="chart-select-item" data-chart="team">
+                            <input type="checkbox" value="team" checked>
+                            <span class="chart-select-label">Mitarbeiter Ranking</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Nachricht (optional)</label>
+                    <textarea id="shareEmailMessage" placeholder="Optionaler Kommentar zur Auswertung..."></textarea>
+                </div>
+
+                <div class="email-share-actions">
+                    <button class="email-send-btn" id="sendChartEmailBtn" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        Grafiken senden
+                    </button>
+                    <span class="email-send-status" id="emailSendStatus"></span>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Footer -->
@@ -1905,34 +2218,70 @@
             }
         }
         
-        // Monatsdropdown füllen
-        function populateMonthDropdown(defaultYear, defaultMonthIdx) {
-            const select = document.getElementById('monthSelect');
+        // Monats-Grid füllen
+        const germanMonthsShort = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        let selectedMonthValue = null;
+
+        function populateMonthGrid(defaultYear, defaultMonthIdx) {
+            const tabsContainer = document.getElementById('monthYearTabs');
+            const gridContainer = document.getElementById('monthGrid');
             const today = new Date();
             const currentYear = today.getFullYear();
-            
-            // Monate dynamisch ab MCTIME_DATA_START bis heute
-            const dataStartStr = '{{ config.get("MCTIME_DATA_START", "2016-01-01") }}';
-            const dataStartParts = dataStartStr.split('-');
-            const startYear = parseInt(dataStartParts[0]) || 2016;
-            const startMonth = (parseInt(dataStartParts[1]) || 1) - 1; // 0-indexed
-            
-            let options = '<option value="" disabled>Monat wählen...</option>';
 
+            const dataStartStr = '{{ config.get("MCTIME_DATA_START", "2025-01-01") }}';
+            const dataStartParts = dataStartStr.split('-');
+            const startYear = parseInt(dataStartParts[0]) || 2025;
+            const startMonth = (parseInt(dataStartParts[1]) || 1) - 1;
+
+            // Jahr-Tabs erstellen
+            let tabsHtml = '';
             for (let year = currentYear; year >= startYear; year--) {
+                const isActive = year === defaultYear ? ' active' : '';
+                tabsHtml += `<button class="month-year-tab${isActive}" data-year="${year}">${year}</button>`;
+            }
+            tabsContainer.innerHTML = tabsHtml;
+
+            function renderMonthsForYear(year) {
                 const endMonth = (year === currentYear) ? today.getMonth() : 11;
                 const beginMonth = (year === startYear) ? startMonth : 0;
-
-                for (let month = endMonth; month >= beginMonth; month--) {
-                    const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-                    const label = `${germanMonths[month]} ${year}`;
-                    const selected = (year === defaultYear && month === defaultMonthIdx) ? 'selected' : '';
-                    options += `<option value="${value}" ${selected}>${label}</option>`;
+                let html = '';
+                for (let m = 0; m < 12; m++) {
+                    const value = `${year}-${String(m + 1).padStart(2, '0')}`;
+                    const disabled = (m < beginMonth || m > endMonth) ? ' disabled' : '';
+                    const active = (selectedMonthValue === value) ? ' active' : '';
+                    html += `<button class="month-grid-btn${disabled}${active}" data-value="${value}">
+                        <span class="month-short">${germanMonthsShort[m]}</span>
+                        <span class="month-num">${String(m + 1).padStart(2, '0')}/${year}</span>
+                    </button>`;
                 }
+                gridContainer.innerHTML = html;
+
+                // Click-Handler für Monat-Buttons
+                gridContainer.querySelectorAll('.month-grid-btn:not(.disabled)').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        gridContainer.querySelectorAll('.month-grid-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        selectedMonthValue = this.dataset.value;
+                        currentFilter = 'month';
+                        loadChartData('month', selectedMonthValue);
+                    });
+                });
             }
-            
-            select.innerHTML = options;
-            select.classList.add('active');
+
+            // Default-Jahr rendern
+            renderMonthsForYear(defaultYear);
+
+            // Default-Monat selektieren
+            selectedMonthValue = `${defaultYear}-${String(defaultMonthIdx + 1).padStart(2, '0')}`;
+
+            // Tab-Klick Handler
+            tabsContainer.querySelectorAll('.month-year-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabsContainer.querySelectorAll('.month-year-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    renderMonthsForYear(parseInt(this.dataset.year));
+                });
+            });
         }
         
         // Initialisiere Charts
@@ -2128,6 +2477,23 @@
                 return chartColors.quaternary;                   // Orange für niedrig
             });
             teamChart.update();
+            
+            // Team-Legende dynamisch aktualisieren
+            const avgHours = data.employee_data.values.length > 0
+                ? data.employee_data.values.reduce((a, b) => a + b, 0) / data.employee_data.values.length
+                : 0;
+            const threshold80 = Math.round(maxHours * 0.8);
+            const threshold50 = Math.round(maxHours * 0.5);
+            document.getElementById('teamLegendGreen').textContent = `> ${threshold80} h`;
+            document.getElementById('teamLegendBlue').textContent = `${threshold50}–${threshold80} h`;
+            document.getElementById('teamLegendOrange').textContent = `< ${threshold50} h`;
+            document.getElementById('teamLegendAvg').textContent = `Ø ${avgHours.toFixed(1)} h/MA`;
+            
+            // Trend-Legende dynamisch aktualisieren
+            const trendValues = data.monthly_data.values || [];
+            const trendTotal = trendValues.reduce((a, b) => a + b, 0);
+            const trendAvg = trendValues.length > 0 ? trendTotal / trendValues.length : 0;
+            document.getElementById('trendLegendSummary').textContent = `Ø ${trendAvg.toFixed(1)} h/Tag · Gesamt: ${trendTotal.toFixed(0)} h`;
             
             // Team Badge aktualisieren (Top X von Y)
             const teamBadge = document.getElementById('teamBadge');
@@ -2391,21 +2757,7 @@
             });
         });
         
-        // Monat Dropdown Event - nur Button enablen, NICHT laden
-        document.getElementById('monthSelect').addEventListener('change', function() {
-            currentMonth = this.value;
-            const btn = document.getElementById('loadMonthBtn');
-            btn.disabled = !this.value;
-        });
-
-        // Monat laden Button
-        document.getElementById('loadMonthBtn').addEventListener('click', function() {
-            const monthSelect = document.getElementById('monthSelect');
-            if (monthSelect.value) {
-                currentFilter = 'month';
-                loadChartData('month', monthSelect.value);
-            }
-        });
+        // Monat: Direkt per Grid-Klick, kein separater Event-Listener nötig
         
         // Quartal-Buttons Event Listener - nur Auswahl ändern, NICHT laden
         document.querySelectorAll('.quarter-btn').forEach(btn => {
@@ -2553,6 +2905,9 @@
                     currentFilterLabel = customLabel || data.filter_label || 'Daten geladen';
                     periodTextEl.textContent = currentFilterLabel;
                     updateExportState(true);
+                    updateEmailSubject();
+                    updateEmailMessage();
+                    updateSendBtnState();
 
                     loadTimeText.textContent = `Geladen in ${loadTime}s`;
                     loadTimeBadge.classList.add('visible');
@@ -2581,6 +2936,53 @@
             }
         }
         
+        // === E-Mail Helper-Funktionen (global, da von loadChartData aufgerufen) ===
+        const chartTitleMap = {
+            weekday: 'Wochentag-Auswertung',
+            project: 'Projektverteilung',
+            trend: 'Monatstrend',
+            team: 'Mitarbeiter-Ranking'
+        };
+
+        function getSelectedChartNames() {
+            const names = [];
+            document.querySelectorAll('.chart-select-item input:checked').forEach(cb => {
+                names.push(chartTitleMap[cb.value] || cb.value);
+            });
+            return names;
+        }
+
+        function updateEmailSubject() {
+            const subjectInput = document.getElementById('shareEmailSubject');
+            if (!subjectInput) return;
+            const names = getSelectedChartNames();
+            const period = currentFilterLabel || 'Zeitraum';
+            const chartsText = names.length > 0 ? names.join(', ') : 'Grafiken';
+            subjectInput.value = `McTime Auswertung – ${period} – ${chartsText}`;
+        }
+
+        function updateEmailMessage() {
+            const msgEl = document.getElementById('shareEmailMessage');
+            if (!msgEl) return;
+            if (msgEl.dataset.userEdited === 'true') return;
+            const names = getSelectedChartNames();
+            const period = currentFilterLabel || 'Zeitraum';
+            if (names.length > 0) {
+                msgEl.value = `Anbei senden wir Ihnen die ${names.join(', ')} aus der McTime Zeitauswertung für den Zeitraum ${period}.`;
+            } else {
+                msgEl.value = '';
+            }
+        }
+
+        function updateSendBtnState() {
+            const btn = document.getElementById('sendChartEmailBtn');
+            if (!btn) return;
+            const hasCharts = document.querySelectorAll('.chart-select-item input:checked').length > 0;
+            const hasEmail = document.getElementById('shareEmailTo').value.trim().length > 0;
+            const hasData = currentChartData !== null;
+            btn.disabled = !(hasCharts && hasEmail && hasData);
+        }
+
         // Beim Laden der Seite
         document.addEventListener('DOMContentLoaded', function() {
             // Dynamisch: Aktuellen Monat als Standard verwenden
@@ -2590,17 +2992,19 @@
             const defaultMonthValue = `${defaultYear}-${String(defaultMonth).padStart(2, '0')}`;
             const defaultMonthLabel = `${germanMonths[defaultMonth - 1]} ${defaultYear}`;
 
-            populateMonthDropdown(defaultYear, defaultMonth - 1);
+            populateMonthGrid(defaultYear, defaultMonth - 1);
             initCharts();
             updateExportState(false);
 
             document.getElementById('exportPdfBtn').addEventListener('click', exportChartsAsPdf);
 
-            // Quartal-Jahr Dropdown füllen
+            // Quartal-Jahr Dropdown füllen (dynamisch ab MCTIME_DATA_START)
             const quarterYearSelect = document.getElementById('quarterYearSelect');
             const currentYear = now.getFullYear();
+            const qStartStr = '{{ config.get("MCTIME_DATA_START", "2025-01-01") }}';
+            const qStartYear = parseInt(qStartStr.split('-')[0]) || 2025;
             quarterYearSelect.innerHTML = '';
-            for (let year = currentYear; year >= 2025; year--) {
+            for (let year = currentYear; year >= qStartYear; year--) {
                 const option = document.createElement('option');
                 option.value = year;
                 option.textContent = year;
@@ -2645,6 +3049,157 @@
             });
             document.querySelectorAll('.filter-chip').forEach(btn => {
                 btn.classList.remove('active');
+            });
+
+            // === E-Mail Grafik-Versand (Event-Listener) ===
+            document.getElementById('shareEmailMessage').addEventListener('input', function() {
+                this.dataset.userEdited = 'true';
+            });
+
+            const chartSelectItems = document.querySelectorAll('.chart-select-item');
+            chartSelectItems.forEach(item => {
+                const cb = item.querySelector('input[type="checkbox"]');
+                if (cb.checked) item.classList.add('selected');
+                cb.addEventListener('change', function() {
+                    item.classList.toggle('selected', this.checked);
+                    updateSendBtnState();
+                    updateEmailSubject();
+                    updateEmailMessage();
+                });
+            });
+
+            document.getElementById('shareEmailTo').addEventListener('input', updateSendBtnState);
+
+            document.getElementById('sendChartEmailBtn').addEventListener('click', async function() {
+                const btn = this;
+                const statusEl = document.getElementById('emailSendStatus');
+                const emailTo = document.getElementById('shareEmailTo').value.trim();
+                const subjectInput = document.getElementById('shareEmailSubject').value.trim();
+                const message = document.getElementById('shareEmailMessage').value.trim();
+
+                if (!emailTo) { statusEl.className = 'email-send-status error'; statusEl.textContent = 'Bitte E-Mail-Adresse eingeben'; return; }
+                if (!currentChartData) { statusEl.className = 'email-send-status error'; statusEl.textContent = 'Bitte zuerst Daten laden'; return; }
+
+                const selectedCharts = [];
+                document.querySelectorAll('.chart-select-item input:checked').forEach(cb => {
+                    selectedCharts.push(cb.value);
+                });
+                if (selectedCharts.length === 0) { statusEl.className = 'email-send-status error'; statusEl.textContent = 'Mindestens eine Grafik auswählen'; return; }
+
+                btn.disabled = true;
+                btn.innerHTML = '<svg class="spin" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="30 70" stroke-linecap="round"/></svg> Wird gesendet...';
+                statusEl.className = 'email-send-status';
+                statusEl.textContent = 'Grafiken werden erfasst...';
+
+                try {
+                    // Charts als Base64-Bilder erfassen
+                    const chartMap = {
+                        weekday: { chart: weekdayChart, title: 'Arbeitszeiten pro Wochentag' },
+                        project: { chart: projectChart, title: 'Projektverteilung' },
+                        trend: { chart: trendChart, title: 'Arbeitsstunden pro Monat' },
+                        team: { chart: teamChart, title: 'Mitarbeiter Stunden Ranking' }
+                    };
+
+                    const chartImages = [];
+                    for (const key of selectedCharts) {
+                        const info = chartMap[key];
+                        if (info && info.chart) {
+                            const canvas = info.chart.canvas;
+                            chartImages.push({
+                                key: key,
+                                title: info.title,
+                                image: canvas.toDataURL('image/png')
+                            });
+                        }
+                    }
+
+                    const subject = subjectInput || `McTime Auswertung – ${currentFilterLabel || 'Zeitraum'} – Grafiken`;
+
+                    // PDF generieren (gleiche Logik wie PDF-Export)
+                    statusEl.textContent = 'PDF wird erstellt...';
+                    let pdfBase64 = null;
+                    try {
+                        const chartsForPdf = chartExportDefinitions.filter(c => selectedCharts.includes(c.key));
+                        if (chartsForPdf.length > 0) {
+                            const { jsPDF } = window.jspdf;
+                            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                            const pageWidth = pdf.internal.pageSize.getWidth();
+                            const pageHeight = pdf.internal.pageSize.getHeight();
+                            const logoData = await loadImageAsDataUrl("{{ url_for('static', filename='mctime_logo.png') }}");
+                            const createdOn = new Date().toLocaleDateString('de-DE');
+
+                            for (let i = 0; i < chartsForPdf.length; i++) {
+                                const chart = chartsForPdf[i];
+                                const cardElement = document.querySelector(chart.selector);
+                                if (!cardElement) continue;
+                                if (i > 0) pdf.addPage();
+
+                                const cvs = await html2canvas(cardElement, {
+                                    scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false
+                                });
+                                const imgData = cvs.toDataURL('image/png');
+
+                                pdf.addImage(logoData, 'PNG', 12, 8, 34, 10);
+                                pdf.setFont('helvetica', 'bold');
+                                pdf.setFontSize(16);
+                                pdf.text('Export Zeitauswertungen', 50, 13);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setFontSize(10);
+
+                                const desc = `Diese Seite zeigt die Grafik ${chart.title} für den Zeitraum ${currentFilterLabel || 'ohne Zeitraumangabe'}.`;
+                                pdf.text(pdf.splitTextToSize(desc, pageWidth - 24), 12, 24);
+
+                                const availW = pageWidth - 24, availH = pageHeight - 60;
+                                const ratio = cvs.width / cvs.height;
+                                let rW = availW, rH = rW / ratio;
+                                if (rH > availH) { rH = availH; rW = rH * ratio; }
+                                pdf.addImage(imgData, 'PNG', (pageWidth - rW) / 2, 34, rW, rH);
+
+                                pdf.setDrawColor(226, 232, 240);
+                                pdf.line(12, pageHeight - 16, pageWidth - 12, pageHeight - 16);
+                                pdf.setFontSize(9);
+                                pdf.text(`Ersteller Infocom GmbH © ${createdOn}`, 12, pageHeight - 10);
+                                pdf.text(`Seite ${i + 1} von ${chartsForPdf.length}`, pageWidth - 12, pageHeight - 10, { align: 'right' });
+                            }
+
+                            pdfBase64 = pdf.output('datauristring').split(',')[1];
+                        }
+                    } catch (pdfErr) {
+                        console.warn('PDF-Erstellung fehlgeschlagen, sende ohne PDF:', pdfErr);
+                    }
+
+                    statusEl.textContent = 'E-Mail wird gesendet...';
+
+                    const response = await fetch('/api/send-chart-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email_to: emailTo,
+                            subject: subject,
+                            message: message,
+                            period: currentFilterLabel || 'Nicht angegeben',
+                            charts: chartImages,
+                            pdf_base64: pdfBase64
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        statusEl.className = 'email-send-status success';
+                        statusEl.textContent = `Erfolgreich an ${emailTo} gesendet`;
+                        setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'email-send-status'; }, 5000);
+                    } else {
+                        statusEl.className = 'email-send-status error';
+                        statusEl.textContent = data.message || 'Fehler beim Senden';
+                    }
+                } catch (error) {
+                    statusEl.className = 'email-send-status error';
+                    statusEl.textContent = 'Netzwerkfehler: ' + error.message;
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Grafiken senden';
+                    updateSendBtnState();
+                }
             });
         });
     </script>

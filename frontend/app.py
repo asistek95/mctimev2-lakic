@@ -287,8 +287,9 @@ def _build_analytics_range(date_from, date_to):
 
 
 def _get_entry_date_key(entry):
-    if entry.get('date_formatted'):
-        return entry.get('date_formatted')
+    date_fmt = entry.get('date_formatted')
+    if date_fmt and date_fmt != 'Unknown Date':
+        return date_fmt
     raw_from = entry.get('from')
     if not raw_from:
         return None
@@ -966,6 +967,136 @@ def send_email():
         })
 
 
+@app.route('/api/send-chart-email', methods=['POST'])
+def send_chart_email():
+    """Send chart images via email"""
+    import smtplib
+    import base64
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
+    from email.mime.application import MIMEApplication
+
+    try:
+        data = request.get_json()
+        email_to = data.get('email_to', '').strip()
+        subject = data.get('subject', 'McTime Auswertung')
+        message = data.get('message', '')
+        period = data.get('period', '')
+        charts = data.get('charts', [])
+        pdf_base64 = data.get('pdf_base64')
+
+        if not email_to:
+            return jsonify({'status': 'error', 'message': 'Keine Empfänger-Adresse angegeben'})
+        if not charts:
+            return jsonify({'status': 'error', 'message': 'Keine Grafiken ausgewählt'})
+
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        smtp_user = os.getenv('SMTP_USERNAME', '')
+        smtp_pass = os.getenv('SMTP_PASSWORD', '')
+        sender = os.getenv('SENDER_EMAIL', smtp_user)
+        display_name = os.getenv('SENDER_DISPLAY_NAME', 'McTime Zeitauswertung')
+
+        if not smtp_user or not smtp_pass:
+            return jsonify({'status': 'error', 'message': 'SMTP nicht konfiguriert'}), 500
+
+        msg = MIMEMultipart('mixed')
+        msg['From'] = f'{display_name} <{sender}>'
+        msg['To'] = email_to
+        msg['Subject'] = subject
+
+        # Related-Teil für HTML + Inline-Bilder
+        related = MIMEMultipart('related')
+
+        # Chart-Titel zuordnen
+        chart_count = len(charts)
+        chart_list_html = ''
+        for i, chart in enumerate(charts):
+            cid = f'chart_{i}'
+            chart_list_html += f'''
+            <tr>
+                <td style="padding:20px 0 8px 0;">
+                    <div style="font-weight:600;font-size:15px;color:#1e293b;padding-bottom:8px;">{chart.get("title", "Grafik")}</div>
+                    <img src="cid:{cid}" style="max-width:100%;border-radius:12px;border:1px solid #e2e8f0;" />
+                </td>
+            </tr>'''
+
+        message_html = ''
+        if message:
+            message_html = f'''
+            <tr><td style="padding:16px 0 0 0;">
+                <div style="background:#f8fafc;border-radius:10px;padding:16px;font-size:14px;color:#475569;border-left:4px solid #3b82f6;">
+                    {message.replace(chr(10), "<br>")}
+                </div>
+            </td></tr>'''
+
+        html_body = f'''
+        <html><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
+        <tr><td align="center">
+        <table width="640" cellpadding="0" cellspacing="0" style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <tr><td style="background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);padding:32px 40px;">
+                <div style="color:white;font-size:22px;font-weight:700;">McTime Zeitauswertung</div>
+                <div style="color:rgba(255,255,255,0.85);font-size:14px;margin-top:4px;">Grafik-Report · {period}</div>
+            </td></tr>
+            <tr><td style="padding:32px 40px;">
+                <div style="font-size:14px;color:#64748b;margin-bottom:20px;">
+                    Anbei {chart_count} {"Grafik" if chart_count == 1 else "Grafiken"} aus der McTime Datenauswertung
+                    für den Zeitraum <strong style="color:#1e293b;">{period}</strong>.
+                </div>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    {chart_list_html}
+                    {message_html}
+                </table>
+            </td></tr>
+            <tr><td style="background:#f8fafc;padding:20px 40px;text-align:center;font-size:12px;color:#94a3b8;">
+                Automatisch generiert von McTime Data Bridge &middot; {datetime.now().strftime("%d.%m.%Y %H:%M")}
+            </td></tr>
+        </table>
+        </td></tr></table>
+        </body></html>'''
+
+        related.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+        # Chart-Bilder als Inline-Attachments
+        for i, chart in enumerate(charts):
+            img_data = chart.get('image', '')
+            if ',' in img_data:
+                img_data = img_data.split(',', 1)[1]
+            img_bytes = base64.b64decode(img_data)
+            img = MIMEImage(img_bytes, _subtype='png')
+            img.add_header('Content-ID', f'<chart_{i}>')
+            img.add_header('Content-Disposition', 'inline', filename=f'{chart.get("key", "chart")}_{period.replace(" ", "_")}.png')
+            related.attach(img)
+
+        msg.attach(related)
+
+        # PDF als Datei-Anhang
+        if pdf_base64:
+            pdf_bytes = base64.b64decode(pdf_base64)
+            safe_period = period.replace(' ', '_').replace('/', '-') if period else 'export'
+            pdf_filename = f'zeitauswertungen_{safe_period}.pdf'
+            pdf_part = MIMEApplication(pdf_bytes, _subtype='pdf')
+            pdf_part.add_header('Content-Disposition', 'attachment', filename=pdf_filename)
+            msg.attach(pdf_part)
+
+        use_tls = os.getenv('USE_TLS', 'true').lower() == 'true'
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            if use_tls:
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+
+        logger.info(f"Chart email sent to {email_to} ({chart_count} charts, PDF={'yes' if pdf_base64 else 'no'})")
+        pdf_hint = ' + PDF' if pdf_base64 else ''
+        return jsonify({'status': 'success', 'message': f'{chart_count} Grafiken{pdf_hint} an {email_to} gesendet'})
+
+    except Exception as e:
+        logger.error(f"Error sending chart email: {e}")
+        return jsonify({'status': 'error', 'message': f'Fehler: {str(e)}'})
+
+
 # ==================== ZUSÄTZLICHE MIDDLEWARE-ENDPOINTS ====================
 
 @app.route('/api/employees')
@@ -1116,6 +1247,38 @@ def get_chart_stats():
             total_productive_hours = 0.0
 
             # Sammle Daten von allen Mitarbeitern PARALLEL (statt sequentiell)
+            # MCTime API Max-Range: /times = 366 Tage, /analytics = 1 Monat
+            range_days = (date_to - date_from).days
+
+            # Time-Chunks: max 365 Tage pro Chunk
+            time_chunks = []
+            if range_days > 365:
+                chunk_start = date_from
+                while chunk_start < date_to:
+                    chunk_end = min(chunk_start + timedelta(days=364), date_to)
+                    time_chunks.append((chunk_start, chunk_end))
+                    chunk_start = chunk_end + timedelta(days=1)
+                logger.info(f"Langer Datumsbereich ({range_days} Tage) -> {len(time_chunks)} Time-Chunks")
+            else:
+                time_chunks = [(date_from, date_to)]
+
+            # Analytics-Chunks: IMMER monatlich (API erlaubt max 1 Monat)
+            analytics_chunks = []
+            chunk_start = date_from.replace(day=1)
+            while chunk_start <= date_to:
+                # Monatsende berechnen
+                if chunk_start.month == 12:
+                    next_month = chunk_start.replace(year=chunk_start.year + 1, month=1, day=1)
+                else:
+                    next_month = chunk_start.replace(month=chunk_start.month + 1, day=1)
+                chunk_end = next_month - timedelta(days=1)
+                # Bereich auf date_from/date_to begrenzen
+                actual_start = max(chunk_start, date_from)
+                actual_end = min(chunk_end, date_to)
+                analytics_chunks.append((actual_start, actual_end))
+                chunk_start = next_month
+            logger.info(f"Analytics: {len(analytics_chunks)} Monats-Chunks für {range_days} Tage")
+
             def fetch_employee_entries(emp):
                 emp_id = emp.get('id') or emp.get('employee_id')
                 first_name = emp.get('firstName') or emp.get('first_name') or ''
@@ -1124,25 +1287,46 @@ def get_chart_stats():
                 if not emp_id:
                     return None
                 try:
-                    time_entries = middleware.get_time_entries(
-                        employee_id=emp_id,
-                        date_from=date_from_api,
-                        date_to=date_to_api
-                    )
+                    # Zeit-Einträge: Bei mehreren Chunks zusammenführen
+                    all_time_entries = []
+                    for chunk_from, chunk_to in time_chunks:
+                        chunk_from_api = chunk_from.strftime('%d.%m.%Y')
+                        chunk_to_api = chunk_to.strftime('%d.%m.%Y')
+                        entries = middleware.get_time_entries(
+                            employee_id=emp_id,
+                            date_from=chunk_from_api,
+                            date_to=chunk_to_api
+                        )
+                        if entries:
+                            all_time_entries.extend(entries)
+
+                    # Analytics: IMMER monatlich chunken (API Max = 1 Monat)
                     analytics = {}
                     if backend_service and backend_service.mctime_api:
-                        analytics = backend_service.mctime_api.get_analytics(
-                            analytics_from=analytics_from_api,
-                            analytics_to=analytics_to_api,
-                            user_ids=[emp_id]
-                        )
+                        merged_totals = {'productive': {'total': 0}, 'targetTimes': {'total': 0}}
+                        for chunk_from, chunk_to in analytics_chunks:
+                            a_from, a_to = _build_analytics_range(chunk_from, chunk_to)
+                            chunk_analytics = backend_service.mctime_api.get_analytics(
+                                analytics_from=a_from,
+                                analytics_to=a_to,
+                                user_ids=[emp_id]
+                            )
+                            if chunk_analytics and isinstance(chunk_analytics, dict):
+                                totals = chunk_analytics.get('totals', {})
+                                p_total = (totals.get('productive') or {}).get('total', 0)
+                                t_total = (totals.get('targetTimes') or {}).get('total', 0)
+                                if isinstance(p_total, (int, float)):
+                                    merged_totals['productive']['total'] += p_total
+                                if isinstance(t_total, (int, float)):
+                                    merged_totals['targetTimes']['total'] += t_total
+                        analytics = {'totals': merged_totals}
                     return {
                         'employee_id': emp_id,
                         'full_name': emp_name,
                         'first_name': first_name,
                         'last_name': last_name,
                         'personnel_number': _normalize_personnel_number(emp.get('personnel_number')),
-                        'time_entries': time_entries,
+                        'time_entries': all_time_entries,
                         'analytics': analytics
                     }
                 except Exception as e:
@@ -1151,6 +1335,11 @@ def get_chart_stats():
 
             with ThreadPoolExecutor(max_workers=8) as executor:
                 results = list(executor.map(fetch_employee_entries, employees))
+
+            # Debug: Zusammenfassung der API-Ergebnisse
+            total_api_entries = sum(len(r.get('time_entries', [])) for r in results if r)
+            valid_results = sum(1 for r in results if r)
+            logger.info(f"API-Ergebnis: {valid_results}/{len(employees)} MA, {total_api_entries} Einträge total (Bereich: {date_from_api} - {date_to_api})")
 
             for result in results:
                 if result is None:
@@ -1257,10 +1446,16 @@ def get_chart_stats():
             sorted_projects = sorted(project_hours.items(), key=lambda x: x[1], reverse=True)
 
             # Monatstrend - tägliche Stunden nach Datum sortiert
-            sorted_daily = sorted(
-                [(key, value) for key, value in daily_hours.items() if key != 'unknown'],
-                key=lambda item: datetime.strptime(item[0], '%d.%m.%y')
-            )
+            valid_daily = []
+            for key, value in daily_hours.items():
+                if key in ('unknown', 'Unknown Date') or not key:
+                    continue
+                try:
+                    datetime.strptime(key, '%d.%m.%y')
+                    valid_daily.append((key, value))
+                except ValueError:
+                    logger.warning(f"Ungültiger Datums-Key übersprungen: '{key}'")
+            sorted_daily = sorted(valid_daily, key=lambda item: datetime.strptime(item[0], '%d.%m.%y'))
 
             # Berechne KPIs
             active_employees = len([e for e in sorted_employees if e[1] > 0])
@@ -1354,7 +1549,9 @@ def get_chart_stats():
             return jsonify(response_data)
 
         except Exception as e:
-            logger.error(f"Fehler bei Datenaggregation: {e}", exc_info=True)
+            logger.error(f"KRITISCH - Datenaggregation fehlgeschlagen: {e}", exc_info=True)
+            import traceback
+            traceback.print_exc()
             # Rückfallwert: Leere Daten mit korrektem Format
             return jsonify({
                 "status": "success",
