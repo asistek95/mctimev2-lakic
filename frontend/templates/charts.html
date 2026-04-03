@@ -1388,7 +1388,7 @@
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="#3b82f6">
                                     <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
                                 </svg>
-                                <span>Alle verfügbaren Daten ab September 2025</span>
+                                <span id="alltime-label">Alle verfügbaren Daten</span>
                             </div>
                         </div>
                     </div>
@@ -1427,7 +1427,7 @@
             </div>
         </div>
 
-        <!-- KPI Cards -->
+        <!-- KPI Cards - Zeile 1: Stunden | Auslastung | Krankheitstage -->
         <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="kpi-card blue">
                 <div class="kpi-icon">
@@ -1438,26 +1438,20 @@
                 <div class="kpi-value" id="kpi-hours">-</div>
                 <div class="kpi-label">Erfasste Stunden</div>
                 <div class="kpi-change positive" id="kpi-hours-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/>
-                    </svg>
                     <span>Lade...</span>
                 </div>
             </div>
             
-            <div class="kpi-card green clickable" onclick="showKpiDetails('punctuality')">
+            <div class="kpi-card green clickable" onclick="showKpiDetails('utilization')">
                 <div class="kpi-icon">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                        <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/>
                     </svg>
                 </div>
-                <div class="kpi-value" id="kpi-punctuality">-</div>
-                <div class="kpi-label">Pünktlichkeit</div>
-                <div class="kpi-change positive" id="kpi-punctuality-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
-                    </svg>
-                    <span>Klick für Details</span>
+                <div class="kpi-value" id="kpi-utilization">-</div>
+                <div class="kpi-label">Auslastung</div>
+                <div class="kpi-change positive" id="kpi-utilization-info">
+                    <span>Soll vs. Ist</span>
                 </div>
                 <div class="kpi-click-hint">👆 Klicken für Top 3</div>
             </div>
@@ -1471,34 +1465,15 @@
                 <div class="kpi-value" id="kpi-sickdays">-</div>
                 <div class="kpi-label">Krankheitstage</div>
                 <div class="kpi-change negative" id="kpi-sickdays-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
-                    </svg>
                     <span>Klick für Details</span>
                 </div>
                 <div class="kpi-click-hint">👆 Klicken für Top 3</div>
             </div>
         </div>
         
-        <!-- Zweite KPI Zeile -->
+        <!-- KPI Cards - Zeile 2: Einträge+MA | Ø Stunden+Abweichung | Überstunden/Minusstunden -->
         <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: -12px;">
             <div class="kpi-card purple">
-                <div class="kpi-icon">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3"/>
-                    </svg>
-                </div>
-                <div class="kpi-value" id="kpi-entries">-</div>
-                <div class="kpi-label">Zeiteinträge</div>
-                <div class="kpi-change positive" id="kpi-entries-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M19,4H18V2H16V4H8V2H6V4H5C3.89,4 3,4.9 3,6V20A2,2 0 0,0 5,22H19A2,2 0 0,0 21,20V6A2,2 0 0,0 19,4M19,20H5V10H19V20M19,8H5V6H19V8Z"/>
-                    </svg>
-                    <span>Erfasst</span>
-                </div>
-            </div>
-            
-            <div class="kpi-card orange">
                 <div class="kpi-icon">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                         <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,18.25C5.5,16.18 8.41,14.5 12,14.5C15.59,14.5 18.5,16.18 18.5,18.25V20H5.5V18.25Z"/>
@@ -1507,10 +1482,7 @@
                 <div class="kpi-value" id="kpi-employees">-</div>
                 <div class="kpi-label">Aktive Mitarbeiter</div>
                 <div class="kpi-change positive" id="kpi-employees-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/>
-                    </svg>
-                    <span>Mit Einträgen</span>
+                    <span>- Einträge erfasst</span>
                 </div>
             </div>
             
@@ -1523,51 +1495,23 @@
                 <div class="kpi-value" id="kpi-avg">-</div>
                 <div class="kpi-label">Ø Stunden / Mitarbeiter</div>
                 <div class="kpi-change positive" id="kpi-avg-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M7,14L12,9L17,14H7Z"/>
-                    </svg>
                     <span>Durchschnitt</span>
                 </div>
             </div>
-        </div>
 
-        <!-- Dritte KPI Zeile: Überstunden & Minusstunden -->
-        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: -12px;">
-            <div class="kpi-card green clickable" onclick="showKpiDetails('overtime')">
-                <div class="kpi-icon">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M7,14L12,9L17,14H7Z"/>
+            <div class="kpi-card clickable" onclick="showKpiDetails('overtime')" style="border-left: 4px solid #10b981;">
+                <div class="kpi-icon" style="background: linear-gradient(135deg, #d1fae5, #fecaca);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="#059669">
+                        <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/>
                     </svg>
                 </div>
-                <div class="kpi-value" id="kpi-overtime-plus">-</div>
-                <div class="kpi-label">Überstunden</div>
-                <div class="kpi-change positive" id="kpi-overtime-plus-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M7,14L12,9L17,14H7Z"/>
-                    </svg>
-                    <span>Ist &gt; Soll</span>
+                <div class="kpi-value" id="kpi-overtime-plus" style="font-size: 1.5rem;">-</div>
+                <div class="kpi-label">Überstunden / Minusstunden</div>
+                <div class="kpi-change" id="kpi-overtime-info">
+                    <span>Klick für Details</span>
                 </div>
-                <div class="kpi-click-hint">👆 Klicken für Top 3</div>
+                <div class="kpi-click-hint">👆 Klicken für Details</div>
             </div>
-            
-            <div class="kpi-card red clickable" onclick="showKpiDetails('minushours')">
-                <div class="kpi-icon">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path d="M7,10L12,15L17,10H7Z"/>
-                    </svg>
-                </div>
-                <div class="kpi-value" id="kpi-overtime-minus">-</div>
-                <div class="kpi-label">Minusstunden</div>
-                <div class="kpi-change negative" id="kpi-overtime-minus-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M7,10L12,15L17,10H7Z"/>
-                    </svg>
-                    <span>Ist &lt; Soll</span>
-                </div>
-                <div class="kpi-click-hint">👆 Klicken für Top 3</div>
-            </div>
-            
-            <div class="kpi-card" style="visibility: hidden;"></div>
         </div>
         
         <!-- KPI Detail Modal -->
@@ -1672,6 +1616,12 @@
                 <div class="chart-container" style="height: 300px;">
                     <canvas id="trendChart"></canvas>
                 </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot blue"></span>
+                        <span>Tägliche Arbeitsstunden</span>
+                    </div>
+                </div>
             </div>
             
             <!-- Team Performance -->
@@ -1692,15 +1642,15 @@
                 <div class="chart-legend">
                     <div class="legend-item">
                         <span class="legend-dot green"></span>
-                        <span>Top-Performer (>80%)</span>
+                        <span>Viele Stunden</span>
                     </div>
                     <div class="legend-item">
                         <span class="legend-dot blue"></span>
-                        <span>Durchschnitt (50-80%)</span>
+                        <span>Mittlere Stunden</span>
                     </div>
                     <div class="legend-item">
                         <span class="legend-dot orange"></span>
-                        <span>Unter Durchschnitt (<50%)</span>
+                        <span>Wenig Stunden</span>
                     </div>
                 </div>
             </div>
@@ -1961,9 +1911,11 @@
             const today = new Date();
             const currentYear = today.getFullYear();
             
-            // Monate von September 2025 bis heute
-            const startYear = 2025;
-            const startMonth = 8; // September (0-indexed)
+            // Monate dynamisch ab MCTIME_DATA_START bis heute
+            const dataStartStr = '{{ config.get("MCTIME_DATA_START", "2016-01-01") }}';
+            const dataStartParts = dataStartStr.split('-');
+            const startYear = parseInt(dataStartParts[0]) || 2016;
+            const startMonth = (parseInt(dataStartParts[1]) || 1) - 1; // 0-indexed
             
             let options = '<option value="" disabled>Monat wählen...</option>';
 
@@ -2143,11 +2095,9 @@
             // Durchschnitt
             document.getElementById('kpi-avg').textContent = kpi.avg_hours_per_employee.toLocaleString('de-DE');
             
-            // Einträge
-            document.getElementById('kpi-entries').textContent = kpi.entry_count.toLocaleString('de-DE');
-            
-            // Mitarbeiter
+            // Mitarbeiter + Einträge (kombiniert)
             document.getElementById('kpi-employees').textContent = kpi.employee_count;
+            document.getElementById('kpi-employees-info').innerHTML = `<span>${kpi.entry_count} Einträge erfasst</span>`;
         }
         
         // Charts mit neuen Daten aktualisieren
@@ -2194,44 +2144,42 @@
         }
         
         function updatePunctualityAndSickdays(data) {
-            const punctuality = data.punctuality_data || {};
+            const utilization = data.utilization_data || {};
             const sickdays = data.sickdays_data || {};
-            const punctualityScore = Number(punctuality.score || 0);
-            const differenceHours = Number(punctuality.difference_hours || 0);
-            const details = punctuality.details || [];
+            const utilizationScore = Number(utilization.score || 0);
+            const details = utilization.details || [];
+            const targetHours = Number(utilization.target_hours || 0);
+            const productiveHours = Number(utilization.productive_hours || 0);
+            const diffHours = Number(utilization.difference_hours || 0);
 
-            // === Pünktlichkeit (Score in %) ===
-            document.getElementById('kpi-punctuality').textContent = `${punctualityScore}%`;
-            const punctInfo = document.getElementById('kpi-punctuality-info');
-            if (punctualityScore >= 90) {
-                punctInfo.className = 'kpi-change positive';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Nahe Sollzeit</span>`;
-            } else if (punctualityScore >= 75) {
-                punctInfo.className = 'kpi-change positive';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg><span>Soll ${formatHours(punctuality.target_hours)} · Ist ${formatHours(punctuality.productive_hours)}</span>`;
+            // === Auslastung (Ist/Soll in %) ===
+            document.getElementById('kpi-utilization').textContent = `${utilizationScore}%`;
+            const utilInfo = document.getElementById('kpi-utilization-info');
+            if (utilizationScore >= 95) {
+                utilInfo.className = 'kpi-change positive';
+                utilInfo.innerHTML = `<span>Soll ${formatHours(targetHours)} · Ist ${formatHours(productiveHours)}</span>`;
+            } else if (utilizationScore >= 80) {
+                utilInfo.className = 'kpi-change positive';
+                utilInfo.innerHTML = `<span>Soll ${formatHours(targetHours)} · Ist ${formatHours(productiveHours)} (${formatSignedHours(diffHours)})</span>`;
             } else {
-                punctInfo.className = 'kpi-change negative';
-                punctInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>Soll ${formatHours(punctuality.target_hours)} · Ist ${formatHours(punctuality.productive_hours)}</span>`;
+                utilInfo.className = 'kpi-change negative';
+                utilInfo.innerHTML = `<span>Soll ${formatHours(targetHours)} · Ist ${formatHours(productiveHours)} (${formatSignedHours(diffHours)})</span>`;
             }
 
-            // === Überstunden (nur MA mit positiver Abweichung) ===
+            // === Überstunden / Minusstunden (kombinierte Karte) ===
             const overtimeEmployees = details.filter(d => d.deviation_hours > 0);
             const totalOvertimeHours = overtimeEmployees.reduce((sum, d) => sum + d.deviation_hours, 0);
-            document.getElementById('kpi-overtime-plus').textContent = `+${formatNumber(totalOvertimeHours)} Std.`;
-            const overtimePlusInfo = document.getElementById('kpi-overtime-plus-info');
-            overtimePlusInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7,14L12,9L17,14H7Z"/></svg><span>${overtimeEmployees.length} MA über Soll</span>`;
-
-            // === Minusstunden (nur MA mit negativer Abweichung) ===
             const minusEmployees = details.filter(d => d.deviation_hours < 0);
             const totalMinusHours = minusEmployees.reduce((sum, d) => sum + d.deviation_hours, 0);
-            document.getElementById('kpi-overtime-minus').textContent = `${formatNumber(totalMinusHours)} Std.`;
-            const overtimeMinusInfo = document.getElementById('kpi-overtime-minus-info');
-            overtimeMinusInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7,10L12,15L17,10H7Z"/></svg><span>${minusEmployees.length} MA unter Soll</span>`;
+            
+            document.getElementById('kpi-overtime-plus').innerHTML = `<span style="color:#10b981">+${formatNumber(totalOvertimeHours)}</span> / <span style="color:#ef4444">${formatNumber(totalMinusHours)}</span> Std.`;
+            const overtimeInfo = document.getElementById('kpi-overtime-info');
+            overtimeInfo.innerHTML = `<span>${overtimeEmployees.length} MA Überst. · ${minusEmployees.length} MA Minusst.</span>`;
 
             // === Krankheitstage ===
             document.getElementById('kpi-sickdays').textContent = Number(sickdays.total || 0).toLocaleString('de-DE');
             const sickInfo = document.getElementById('kpi-sickdays-info');
-            sickInfo.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg><span>${Number(sickdays.total || 0) > 0 ? 'Im Zeitraum' : 'Keine'}</span>`;
+            sickInfo.innerHTML = `<span>${Number(sickdays.total || 0) > 0 ? 'Im Zeitraum' : 'Keine'}</span>`;
             
             // Daten für Modals speichern
             currentPunctualityData = details;
@@ -2246,15 +2194,12 @@
             const title = document.getElementById('kpiModalTitle');
             const body = document.getElementById('kpiModalBody');
             
-            if (type === 'punctuality') {
-                title.textContent = '📊 Pünktlichkeit – Soll vs. Ist';
-                body.innerHTML = renderPunctualityDetails();
+            if (type === 'utilization') {
+                title.textContent = '📊 Top 3 Auslastung';
+                body.innerHTML = renderUtilizationDetails();
             } else if (type === 'overtime') {
-                title.textContent = '⬆️ Top 3 Überstunden';
-                body.innerHTML = renderOvertimeDetails();
-            } else if (type === 'minushours') {
-                title.textContent = '⬇️ Top 3 Minusstunden';
-                body.innerHTML = renderMinushoursDetails();
+                title.textContent = '📊 Überstunden & Minusstunden';
+                body.innerHTML = renderOvertimeMinusDetails();
             } else if (type === 'sickdays') {
                 title.textContent = '🏥 Top 3 Krankheitstage';
                 body.innerHTML = renderSickdaysDetails();
@@ -2268,44 +2213,48 @@
             document.getElementById('kpiModal').classList.remove('active');
         }
         
-        function renderPunctualityDetails() {
+        function renderUtilizationDetails() {
             if (currentPunctualityData.length === 0) {
                 return '<p style="text-align: center; color: #64748b;">Keine Daten verfügbar</p>';
             }
             
-            const sorted = [...currentPunctualityData].sort((a, b) => b.adherence_percent - a.adherence_percent).slice(0, 5);
+            const sorted = [...currentPunctualityData].sort((a, b) => b.score - a.score).slice(0, 3);
             const ranks = ['gold', 'silver', 'bronze'];
             
             return `
                 <ul class="kpi-detail-list">
                     ${sorted.map((item, index) => {
-                        const isOver = item.deviation_hours >= 0;
-                        const badgeClass = isOver ? 'early' : 'late';
+                        const badgeClass = item.score >= 95 ? 'early' : (item.score >= 80 ? 'early' : 'late');
                         return `
                         <li class="kpi-detail-item">
                             <div class="kpi-detail-rank ${ranks[index] || ''}">${index + 1}</div>
                             <div class="kpi-detail-info">
                                 <div class="kpi-detail-name">${item.name}</div>
-                                <div class="kpi-detail-value">Score ${item.adherence_percent}% · Soll ${formatHours(item.target_hours)} · Ist ${formatHours(item.productive_hours)}</div>
+                                <div class="kpi-detail-value">Soll ${formatHours(item.target_hours)} · Ist ${formatHours(item.productive_hours)} · ${formatSignedHours(item.deviation_hours)}</div>
                             </div>
-                            <span class="kpi-detail-badge ${badgeClass}">${formatSignedHours(item.deviation_hours)}</span>
+                            <span class="kpi-detail-badge ${badgeClass}">${item.score}%</span>
                         </li>`;
                     }).join('')}
                 </ul>
                 <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
-                    * Pünktlichkeit = Wie nah ist die Ist-Zeit an der Soll-Zeit (100% = exakt)
+                    * Auslastung = Ist-Stunden / Soll-Stunden × 100
                 </p>
             `;
         }
 
-        function renderOvertimeDetails() {
-            if (currentOvertimeData.length === 0) {
-                return '<p style="text-align: center; color: #64748b;">Keine Überstunden im Zeitraum</p>';
+        function renderOvertimeMinusDetails() {
+            const hasOvertime = currentOvertimeData.length > 0;
+            const hasMinus = currentMinushoursData.length > 0;
+            
+            if (!hasOvertime && !hasMinus) {
+                return '<p style="text-align: center; color: #64748b;">Keine Abweichungen im Zeitraum</p>';
             }
             
             const ranks = ['gold', 'silver', 'bronze'];
+            let html = '';
             
-            return `
+            if (hasOvertime) {
+                html += `<h4 style="margin: 0 0 8px 0; color: #10b981; font-size: 0.95rem;">⬆️ Top 3 Überstunden</h4>
                 <ul class="kpi-detail-list">
                     ${currentOvertimeData.map((item, index) => `
                         <li class="kpi-detail-item">
@@ -2317,21 +2266,11 @@
                             <span class="kpi-detail-badge early">+${formatNumber(item.deviation_hours)} Std.</span>
                         </li>
                     `).join('')}
-                </ul>
-                <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
-                    * Überstunden = Ist-Stunden − Soll-Stunden
-                </p>
-            `;
-        }
-
-        function renderMinushoursDetails() {
-            if (currentMinushoursData.length === 0) {
-                return '<p style="text-align: center; color: #64748b;">Keine Minusstunden im Zeitraum</p>';
+                </ul>`;
             }
             
-            const ranks = ['gold', 'silver', 'bronze'];
-            
-            return `
+            if (hasMinus) {
+                html += `<h4 style="margin: ${hasOvertime ? '20px' : '0'} 0 8px 0; color: #ef4444; font-size: 0.95rem;">⬇️ Top 3 Minusstunden</h4>
                 <ul class="kpi-detail-list">
                     ${currentMinushoursData.map((item, index) => `
                         <li class="kpi-detail-item">
@@ -2343,11 +2282,14 @@
                             <span class="kpi-detail-badge late">${formatNumber(item.deviation_hours)} Std.</span>
                         </li>
                     `).join('')}
-                </ul>
-                <p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
-                    * Minusstunden = Soll-Stunden − Ist-Stunden
-                </p>
-            `;
+                </ul>`;
+            }
+            
+            html += `<p style="margin-top: 16px; font-size: 0.85rem; color: #94a3b8; text-align: center;">
+                * Abweichung = Ist-Stunden − Soll-Stunden
+            </p>`;
+            
+            return html;
         }
         
         function renderSickdaysDetails() {
@@ -2418,7 +2360,7 @@
                 'quarter': 'Daten für ein komplettes Quartal',
                 'year': 'Alle Daten des aktuellen Jahres',
                 'custom': 'Benutzerdefinierter Zeitraum',
-                'alltime': 'Alle verfügbaren Daten seit September 2025'
+                'alltime': 'Alle verfügbaren Daten'
             };
             textEl.textContent = texts[filter] || 'Wählen Sie einen Zeitraum';
         }

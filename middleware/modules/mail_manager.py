@@ -324,7 +324,8 @@ class MailManager:
             # Erstelle Nachricht
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
-            msg["From"] = self.sender_email
+            display_name = os.getenv("SENDER_DISPLAY_NAME", "McTime Zeitauswertung")
+            msg["From"] = f"{display_name} <{self.sender_email}>"
             msg["To"] = ", ".join(to_list)
             
             # CC hinzufügen falls vorhanden

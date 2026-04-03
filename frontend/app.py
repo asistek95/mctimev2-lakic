@@ -43,6 +43,7 @@ from backend.api_handler import BackendService, McTimeAPI
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['MCTIME_DATA_START'] = os.getenv('MCTIME_DATA_START', '2016-01-01')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # ==================== HYBRID ARCHITEKTUR ====================
@@ -305,6 +306,85 @@ def _calculate_adherence_score(productive_hours, target_hours):
     return max(0, round(score))
 
 
+def _get_target_start_minutes():
+    """Gibt die Soll-Startzeit in Minuten seit Mitternacht zurück (aus .env TARGET_START_TIME)"""
+    target = os.getenv('TARGET_START_TIME', '07:00').strip()
+    try:
+        parts = target.split(':')
+        return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return 7 * 60  # Default 07:00
+
+
+def _calculate_punctuality_from_entries(time_entries):
+    """
+    Berechnet Pünktlichkeit aus Time-Entries.
+    Misst den tatsächlichen Arbeitsbeginn vs. TARGET_START_TIME.
+    Returns: dict mit total_days, on_time_days, late_days, total_late_minutes, avg_late_minutes, daily_details
+    """
+    target_minutes = _get_target_start_minutes()
+    daily_starts = {}  # date_key -> frühester Start in Minuten
+
+    for entry in time_entries:
+        entry_type = (entry.get('type') or '').strip().lower()
+        if entry_type not in PRODUCTIVE_TIME_TYPES:
+            continue
+
+        raw_from = entry.get('from')
+        if not raw_from:
+            continue
+
+        try:
+            dt = datetime.fromisoformat(raw_from.replace('Z', '+00:00'))
+            date_key = dt.strftime('%Y-%m-%d')
+            start_minutes = dt.hour * 60 + dt.minute
+
+            # Frühesten Start pro Tag merken
+            if date_key not in daily_starts or start_minutes < daily_starts[date_key]:
+                daily_starts[date_key] = start_minutes
+        except (ValueError, AttributeError):
+            continue
+
+    if not daily_starts:
+        return {
+            'total_days': 0, 'on_time_days': 0, 'late_days': 0,
+            'total_late_minutes': 0, 'avg_late_minutes': 0, 'score': 100,
+            'daily_details': []
+        }
+
+    total_days = len(daily_starts)
+    late_days = 0
+    total_late_minutes = 0
+    daily_details = []
+
+    for date_key, start_min in sorted(daily_starts.items()):
+        diff = start_min - target_minutes  # positiv = zu spät, negativ = zu früh
+        is_late = diff > 0
+        if is_late:
+            late_days += 1
+            total_late_minutes += diff
+        daily_details.append({
+            'date': date_key,
+            'start_minutes': start_min,
+            'diff_minutes': diff,
+            'late': is_late
+        })
+
+    on_time_days = total_days - late_days
+    avg_late = round(total_late_minutes / total_days, 1) if total_days > 0 else 0
+    score = round((on_time_days / total_days) * 100) if total_days > 0 else 100
+
+    return {
+        'total_days': total_days,
+        'on_time_days': on_time_days,
+        'late_days': late_days,
+        'total_late_minutes': total_late_minutes,
+        'avg_late_minutes': avg_late,
+        'score': score,
+        'daily_details': daily_details
+    }
+
+
 def _format_time_type(type_name):
     if not type_name:
         return 'Arbeitszeit'
@@ -446,12 +526,14 @@ def developer_connect():
 
     current_key = os.getenv('MCTIME_API_KEY', '')
     current_company_name = os.getenv('APP_COMPANY_NAME', 'McTime')
+    current_org_filter = os.getenv('MCTIME_ORGANIZATION_FILTER', '')
 
     return render_template(
         'developer_connect.html',
         login_required=False,
         current_key_masked=_mask_key(current_key),
-        current_company_name=current_company_name
+        current_company_name=current_company_name,
+        current_org_filter=current_org_filter
     )
 
 
@@ -986,7 +1068,11 @@ def get_chart_stats():
                 date_from = now.replace(month=1, day=1)
                 date_to = now.replace(month=12, day=31)
             elif filter_type == 'alltime':
-                date_from = datetime(2025, 9, 1)
+                data_start_str = os.getenv('MCTIME_DATA_START', '2016-01-01')
+                try:
+                    date_from = datetime.strptime(data_start_str, '%Y-%m-%d')
+                except ValueError:
+                    date_from = datetime(2016, 1, 1)
                 date_to = now
             elif filter_type == 'quarter':
                 current_quarter = (now.month - 1) // 3 + 1
@@ -1085,13 +1171,23 @@ def get_chart_stats():
                 if target_hours_analytics > 0 or productive_hours_analytics > 0:
                     total_target_hours += target_hours_analytics
                     total_productive_hours += productive_hours_analytics
+
+                # Auslastung: Ist vs. Soll (wie viel % der Soll-Stunden erreicht)
+                if target_hours_analytics > 0:
+                    utilization_score = round((productive_hours_analytics / target_hours_analytics) * 100)
+                elif productive_hours_analytics > 0:
+                    utilization_score = 100
+                else:
+                    utilization_score = 0
+
+                if target_hours_analytics > 0 or productive_hours_analytics > 0:
                     punctuality_details.append({
                         'name': emp_name,
                         'short_name': short_name,
+                        'score': utilization_score,
                         'target_hours': target_hours_analytics,
                         'productive_hours': productive_hours_analytics,
                         'deviation_hours': deviation_hours,
-                        'adherence_percent': _calculate_adherence_score(productive_hours_analytics, target_hours_analytics)
                     })
 
                 if time_entries:
@@ -1170,12 +1266,15 @@ def get_chart_stats():
             active_employees = len([e for e in sorted_employees if e[1] > 0])
             avg_hours = round(total_hours / active_employees, 1) if active_employees > 0 else 0
             total_sick_days = sum(item['days'] for item in sickday_details)
-            punctuality_score = _calculate_adherence_score(total_productive_hours, total_target_hours)
             overall_deviation_hours = round(total_productive_hours - total_target_hours, 2)
+
+            # Auslastung: Gesamt-Score (Ist/Soll in %)
+            utilization_score = round((total_productive_hours / total_target_hours) * 100) if total_target_hours > 0 else 0
 
             punctuality_details = sorted(
                 punctuality_details,
-                key=lambda item: (item['adherence_percent'], -abs(item['deviation_hours']))
+                key=lambda item: item['score'],
+                reverse=True
             )
             sickday_details = sorted(sickday_details, key=lambda item: item['days'], reverse=True)[:3]
 
@@ -1205,7 +1304,7 @@ def get_chart_stats():
                     "employee_count": active_employees,
                     "entry_count": total_entries,
                     "avg_hours_per_employee": avg_hours,
-                    "punctuality_score": punctuality_score,
+                    "utilization_score": utilization_score,
                     "punctuality_diff_hours": overall_deviation_hours,
                     "sick_days_total": total_sick_days
                 },
@@ -1238,8 +1337,8 @@ def get_chart_stats():
                     "total_count": len(sorted_employees),
                     "showing": len(top_employees)
                 },
-                "punctuality_data": {
-                    "score": punctuality_score,
+                "utilization_data": {
+                    "score": utilization_score,
                     "target_hours": round(total_target_hours, 2),
                     "productive_hours": round(total_productive_hours, 2),
                     "difference_hours": overall_deviation_hours,
@@ -1266,7 +1365,7 @@ def get_chart_stats():
                     "employee_count": 0,
                     "entry_count": 0,
                     "avg_hours_per_employee": 0,
-                    "punctuality_score": 0,
+                    "utilization_score": 0,
                     "punctuality_diff_hours": 0,
                     "sick_days_total": 0
                 },
@@ -1274,7 +1373,7 @@ def get_chart_stats():
                 "project_data": {"labels": [], "values": []},
                 "monthly_data": {"labels": [], "values": []},
                 "employee_data": {"labels": [], "values": [], "full_names": [], "total_count": 0, "showing": 0},
-                "punctuality_data": {"score": 0, "target_hours": 0, "productive_hours": 0, "difference_hours": 0, "details": []},
+                "utilization_data": {"score": 0, "target_hours": 0, "productive_hours": 0, "difference_hours": 0, "details": []},
                 "sickdays_data": {"total": 0, "details": []}
             })
 

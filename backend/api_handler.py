@@ -1,5 +1,6 @@
 import requests
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -13,6 +14,7 @@ class McTimeAPI:
             "API_KEY": api_key
         }
         self._employees_cache = None
+        self._cache_lock = threading.Lock()
 
     @staticmethod
     def _normalize_personnel_number(value: Optional[str]) -> str:
@@ -93,56 +95,60 @@ class McTimeAPI:
         Holt Personalnummern über den Detail-Endpoint /users/{id}.
         Ergebnis wird gecacht bis manuell geleert.
         """
-        # Cache prüfen
+        # Cache prüfen (Thread-safe)
         if self._employees_cache is not None:
             return self._employees_cache
 
-        url = f"{self.base_url}/users"
-        params = {"roles": "employee"}
-        # Organisations-Filter deaktiviert - keine API-Berechtigung
+        with self._cache_lock:
+            # Double-check nach Lock
+            if self._employees_cache is not None:
+                return self._employees_cache
+
+            url = f"{self.base_url}/users"
+            params = {"roles": "employee"}
             
-        try:
-            response = requests.get(url, headers=self.headers, params=params)
-            
-            if response.status_code == 200:
-                data = response.json()
-                users = data.get("items", [{}])[0].get("data", {}).get("users", [])
+            try:
+                response = requests.get(url, headers=self.headers, params=params)
                 
-                # Detail-Daten parallel fuer alle User holen
-                user_ids = [u.get("id", "") for u in users]
-                with ThreadPoolExecutor(max_workers=10) as executor:
-                    details = list(executor.map(
-                        lambda uid: self._get_user_detail(uid) if uid else {},
-                        user_ids
-                    ))
+                if response.status_code == 200:
+                    data = response.json()
+                    users = data.get("items", [{}])[0].get("data", {}).get("users", [])
+                    
+                    # Detail-Daten parallel fuer alle User holen
+                    user_ids = [u.get("id", "") for u in users]
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        details = list(executor.map(
+                            lambda uid: self._get_user_detail(uid) if uid else {},
+                            user_ids
+                        ))
 
-                employees = []
-                for user, detail in zip(users, details):
-                    full_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
-                    if not full_name:
-                        full_name = "Unknown User"
+                    employees = []
+                    for user, detail in zip(users, details):
+                        full_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
+                        if not full_name:
+                            full_name = "Unknown User"
 
-                    personnel_number = self._extract_personnel_number(detail)
-                    user_id = user.get("id", "")
+                        personnel_number = self._extract_personnel_number(detail)
+                        user_id = user.get("id", "")
 
-                    employees.append({
-                        "id": user_id,
-                        "name": full_name,
-                        "firstName": user.get("firstName", ""),
-                        "lastName": user.get("lastName", ""),
-                        "email": user.get("email"),
-                        "organizationId": user.get("organizationId"),
-                        "personnel_number": personnel_number
-                    })
-                result = sorted(employees, key=lambda x: x["name"])
-                self._employees_cache = result
-                return result
-            else:
-                print(f"Error fetching employees: {response.status_code}")
+                        employees.append({
+                            "id": user_id,
+                            "name": full_name,
+                            "firstName": user.get("firstName", ""),
+                            "lastName": user.get("lastName", ""),
+                            "email": user.get("email"),
+                            "organizationId": user.get("organizationId"),
+                            "personnel_number": personnel_number
+                        })
+                    result = sorted(employees, key=lambda x: x["name"])
+                    self._employees_cache = result
+                    return result
+                else:
+                    print(f"Error fetching employees: {response.status_code}")
+                    return []
+            except Exception as e:
+                print(f"Exception in get_employees: {e}")
                 return []
-        except Exception as e:
-            print(f"Exception in get_employees: {e}")
-            return []
     
     def get_user_name_by_id(self, user_id: str) -> str:
         """
@@ -348,28 +354,23 @@ class McTimeAPI:
         if organization_id:
             params["organizationId"] = organization_id
             
-        print(f"=== MCTIME API CALL ===")
-        print(f"URL: {url}")
-        print(f"Headers: {self.headers}")
-        print(f"Params: {params}")
-            
         try:
             response = requests.get(url, headers=self.headers, params=params)
-            print(f"=== MCTIME API RESPONSE ===")
-            print(f"Status Code: {response.status_code}")
-            print(f"Response Text: {response.text}")
             
             if response.status_code == 200:
                 data = response.json()
-                print(f"Parsed JSON: {data}")
                 
                 # Extract time entries from the nested structure
                 time_entries = data.get("items", [])
                 all_times = []
-                
-                employee = self.get_user_by_id(employee_id)
-                user_name = employee.get('name') or 'Unknown User'
-                print(f"Got user name from /users endpoint: '{user_name}'")
+
+                # Personalnummer aus Cache holen (kein extra API-Call)
+                personnel_number = ''
+                if self._employees_cache:
+                    for emp in self._employees_cache:
+                        if emp.get('id') == employee_id:
+                            personnel_number = emp.get('personnel_number', '')
+                            break
                 
                 for item in time_entries:
                     if item.get('message') == 'Success' and 'data' in item:
@@ -377,26 +378,22 @@ class McTimeAPI:
                         
                         if 'timeEntries' in item_data:
                             for time_entry in item_data['timeEntries']:
+                                # Name direkt aus der /times Antwort nehmen
+                                user_first = time_entry.get('userFirstName', '')
+                                user_last = time_entry.get('userLastName', '')
+                                user_name = f"{user_first} {user_last}".strip() or 'Unknown User'
+
                                 if 'times' in time_entry:
-                                    # Extract individual time records
                                     for time_record in time_entry['times']:
-                                        # Add the user name from /users API (same as dropdown)
                                         time_record['name'] = user_name
                                         time_record['id'] = employee_id
-                                        time_record['first_name'] = employee.get('firstName', '')
-                                        time_record['last_name'] = employee.get('lastName', '')
-                                        time_record['personnel_number'] = employee.get('personnel_number', '')
+                                        time_record['first_name'] = user_first
+                                        time_record['last_name'] = user_last
+                                        time_record['personnel_number'] = personnel_number
                                         
-                                        # Calculate work hours and format breaks
                                         time_record = self._enhance_time_record(time_record)
-                                        
                                         all_times.append(time_record)
-                                        
-                                        print(f"Added time record with name: '{time_record.get('name', 'NO_NAME')}'")
                 
-                print(f"Extracted {len(all_times)} individual time records")
-                if all_times:
-                    print(f"First record user name: '{all_times[0].get('name', 'MISSING')}'")
                 return all_times
             else:
                 print(f"Error fetching time entries: {response.status_code}")

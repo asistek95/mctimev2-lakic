@@ -146,6 +146,12 @@
                     <label class="dev-label" for="api_key">Neuer McTime API-Key</label>
                     <input class="dev-input" id="api_key" type="password" placeholder="API-Key eingeben">
                 </div>
+                <div class="dev-group full" id="org-select-group" style="display:none;">
+                    <label class="dev-label" for="org_filter">Organisation (Filter)</label>
+                    <select class="dev-input" id="org_filter">
+                        <option value="">-- Alle Organisationen --</option>
+                    </select>
+                </div>
             </div>
 
             <div class="dev-actions">
@@ -190,6 +196,26 @@ async function testKey() {
 
     const orgNames = (data.organizations || []).map(o => o.name || o.organizationName).join(' | ');
     result.textContent = 'OK: Key gueltig. Organizations: ' + data.organization_count + '\n' + orgNames;
+
+    // Organisation-Dropdown befuellen
+    const orgSelect = document.getElementById('org_filter');
+    const orgGroup = document.getElementById('org-select-group');
+    orgSelect.innerHTML = '<option value="">-- Alle Organisationen --</option>';
+    (data.organizations || []).forEach(function(org) {
+        const name = org.name || org.organizationName || '';
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        orgSelect.appendChild(opt);
+    });
+    if ((data.organizations || []).length > 0) {
+        orgGroup.style.display = '';
+        // Vorauswahl: aktuelle org_filter falls vorhanden
+        const currentFilter = '{{ current_org_filter|default("") }}';
+        if (currentFilter) {
+            orgSelect.value = currentFilter;
+        }
+    }
 }
 
 async function saveKey() {
@@ -202,12 +228,13 @@ async function saveKey() {
         return;
     }
 
+    const orgFilter = (document.getElementById('org_filter').value || '').trim();
     result.textContent = 'Speichere Key in .env und lade Dienste neu...';
 
     const response = await fetch("{{ url_for('developer_connect_save') }}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: apiKey, company_name: companyName })
+        body: JSON.stringify({ api_key: apiKey, company_name: companyName, organization_filter: orgFilter })
     });
 
     const data = await response.json();

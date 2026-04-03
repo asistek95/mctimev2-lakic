@@ -69,3 +69,6 @@ config_local.py
 # Security audit reports (contain exposed credentials)
 SECURITY_AUDIT.md
 security_audit.md
+
+# Test-Scripts (enthalten API-Keys oder sensible Daten)
+check_*.py
